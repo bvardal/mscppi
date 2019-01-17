@@ -15,7 +15,7 @@ pattern = r'(?<=interactsWith":")[^"]+'
 prog = re.compile(pattern)
 result = prog.findall(json)
 
-head = 'var elements = [\n  {"data": {"id": "%s"}, selected: true},\n' % query
+head = 'var elements = [\n  {data: {id: "%s"}, selected: true},\n' % query
 tail = '\n];'
 
 interactions = {query: []}
@@ -57,9 +57,9 @@ nodes = []
 edges = []
 
 for source in interactions.keys():
-    nodes.append('  {"data": {"id": "%s"}}' % source)
+    nodes.append('  {data: {id: "%s"}}' % source)
     for target in interactions[source]:
-        edges.append('  {"data": {"source": "%s", "target": "%s"}}' %(source, target))
+        edges.append('  {data: {"source": "%s", "target": "%s"}}' %(source, target))
 
 with open("elements.js", "w") as output:
     print(head+',\n'.join(nodes+edges)+tail, file=output)
