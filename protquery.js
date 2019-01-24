@@ -3,7 +3,6 @@ var query = document.getElementById("query").value;
 
 fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res => res.json()).then(function(data) {
   console.time("database query")
-
   var elements = [], ids = [];
   var ignore = {}
   ignore[query] = [];
@@ -26,8 +25,6 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
       if(interactor === undefined) {
         continue
       }
-
-     //interactor = interactor.slice(0, 6);
 
       if (!ignore[accession].includes(interactor)) {
         elements.push({data: {id: interactor}});
@@ -55,34 +52,29 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
     container: document.getElementById("cy"),
     elements: elements,
     layout: {name: "cose"},
-
-    style: [
-            {selector: "node", style: {label: "data(id)"}},
-           ]
-
+    style: [{selector: "node", style: {label: "data(id)"}}]
   });
   console.timeEnd("rendering");
 
   // Define network events for click, right-click, and initial rendering
-
   cy.on('tap', 'node', function(){
-    //if (this.data("id") == query) {return 0;}
     if (!this.hasClass("collapsed")) {collapse(this, query);}
     else {expand(this, query);}
   });
 
   cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
 
-  console.time("autocollapse")
   cy.on('ready', function(){
     var i;
     cy.$id(query).style("background-color", "red");
 
-    for(i=1; i<cy.nodes().length; i++) {
-      collapse(cy.nodes()[i]);
+    console.time("autocollapse")
+    var targets = cy.$id(query).outgoers().nodes();
+    for(i=0; i<targets.length; i++) {
+      collapse(targets[i]);
     }
+    console.timeEnd("autocollapse")
   });
-  console.timeEnd("autocollapse")
 
 }).catch(function(){alert("Please enter a valid protein accession.")});
 
