@@ -12,7 +12,7 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
   for (i=0; i<data.length; i++) {
     accession = data[i].accession;
-    elements.push({data: {id:accession, name:name}});
+    elements.push({data: {id: accession, name: data[i].name}});
     ids.push(accession)
 
     if (!data[i].interactions) {
@@ -27,7 +27,9 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
       }
 
       if (!ignore[accession].includes(interactor)) {
-        elements.push({data: {id: interactor}});
+        if (i!=0) {
+        elements.push({data: {id: interactor, name: ""}});
+        }
         elements.push({data: {
                                source: accession, 
                                target: interactor, 
@@ -56,7 +58,7 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
   });
   console.timeEnd("rendering");
 
-  // Define network events for click, right-click, and initial rendering
+  // Define network events for click, right-click, mouseover and initial rendering
   cy.on('tap', 'node', function(){
     if (!this.hasClass("collapsed")) {collapse(this, query);}
     else {expand(this, query);}
@@ -64,7 +66,16 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
   cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
 
-  cy.on("mouseover", "node", function(){displayInfo(this.data("id"));});
+  cy.on("mouseover", "node", function(){
+    name = this.data("name");
+    if (name == "") {
+      getInfo(this);
+    }
+    else {
+      document.getElementById("name").innerHTML= name;
+    }
+  });
+
   cy.on("mouseout", "node", function(){document.getElementById("name").innerHTML="";});
 
   cy.on('ready', function(){
@@ -135,8 +146,11 @@ function expand(node){
   }
 }
 
-function displayInfo(query) {
+function getInfo(node) {
+  var query = node.data("id");
   fetch("https://www.ebi.ac.uk/proteins/api/proteins/"+query).then(res => res.json()).then(function(data) {
-    document.getElementById("name").innerHTML = data.id;
+    var name = data.id;
+    node.data("name", name);
+    document.getElementById("name").innerHTML= name;
   });
 }
