@@ -89,7 +89,7 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
     //node.edgesWith(cy.$id(query)).style("display", "none");
 
-    if (targets.length == 1) {
+    if (targets.length == 1 || node.data("id") == query) {
       return 0;
       }
 
