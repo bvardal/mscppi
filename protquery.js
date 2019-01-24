@@ -12,7 +12,7 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
   for (i=0; i<data.length; i++) {
     accession = data[i].accession;
-    elements.push({data: {id:accession, name}});
+    elements.push({data: {id:accession, name:name}});
     ids.push(accession)
 
     if (!data[i].interactions) {
