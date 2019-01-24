@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+    <title>Network visualisation</title>
+    <script src="cytoscape.min.js"></script>
+    <script src="protquery.js"></script>
+</head>
+
+<style>
+    #cy {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 50px;
+        left: 0px;
+        }
+    #input
+       {
+        text-align: center;
+       }
+</style>
+
+<body>
+    <div id = "input">
+    <!-- <button onClick="sliderCallback(1);">Evidence = 1</button>
+    <button onClick="sliderCallback(2);">Evidence = 2</button> -->
+    <input type="text" id="query" value="Q02410">
+    <button onclick="BuildNetwork()")">Submit</button>
+    </div>
+
+    <div id="cy"></div>
+    <script>
+    </script>
+</body>
+
+</html>
