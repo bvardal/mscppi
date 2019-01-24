@@ -1,8 +1,9 @@
 function BuildNetwork() {
-console.time("database query")
 var query = document.getElementById("query").value;
 
 fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res => res.json()).then(function(data) {
+  console.time("database query")
+
   var elements = [], ids = [];
   var ignore = {}
   ignore[query] = [];
@@ -46,13 +47,10 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
       }
     }
   }
+  console.timeEnd("database query")
 
-  //var text = JSON.stringify(elements);
-  //$(".mypanel").html(text);
-  //alert(text)
-
+  // Add elements to cytoscape container and render
   console.time("rendering");
-
   var cy = cytoscape({
     container: document.getElementById("cy"),
     elements: elements,
@@ -63,8 +61,15 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
            ]
 
   });
-
   console.timeEnd("rendering");
+
+  // Define network events for click, right-click, and initial rendering
+
+  cy.on('tap', 'node', function(){
+    //if (this.data("id") == query) {return 0;}
+    if (!this.hasClass("collapsed")) {collapse(this, query);}
+    else {expand(this, query);}
+  });
 
   cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
 
@@ -72,7 +77,6 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
   cy.on('ready', function(){
     var i;
     cy.$id(query).style("background-color", "red");
-    //cy.nodes().unselectify()
 
     for(i=1; i<cy.nodes().length; i++) {
       collapse(cy.nodes()[i]);
@@ -80,62 +84,56 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
   });
   console.timeEnd("autocollapse")
 
-  cy.on('tap', 'node', function(){collapse(this);});
+}).catch(function(){alert("Please enter a valid protein accession.")});
 
-  function collapse(node){
-    var i, j;
-    var targets = node.connectedEdges().targets().nodes();
-    var changed = false;
+;}
 
-    //node.edgesWith(cy.$id(query)).style("display", "none");
+function collapse(node){
+  var i, j;
+  var targets = node.outgoers().nodes();
 
-    if (targets.length == 1 || node.data("id") == query) {
-      return 0;
-      }
+  if (targets.length == 0) {return 0;}
+  
+  if (node.style("background-color") != "rgb(255,0,0)") {
+    node.style("background-color", "#666");
+  }
+  node.addClass("collapsed");
 
-    if (!node.hasClass("collapsed")) {
-      var colorChoice = "#666";
-      var displayChoice = "none"
-      node.addClass("collapsed");
+  for(i=0; i<targets.length; i++) {
+    if (targets[i].degree() ==1) {
+      targets[i].style("display", "none");
     }
 
     else {
-      var colorChoice = "#999";
-      var displayChoice = "element";
-      node.removeClass("collapsed");
-    }
-
-    for(i=1; i<targets.length; i++) {
-      if (targets[i].degree() ==1) {
-        targets[i].style("display", displayChoice);
-        changed = true;
-      }
-
-      else {
-        var collapsable = true;
-        var incomers = targets[i].incomers().nodes();
-        for(j=0; j<incomers.length; j++) {
-          if(!incomers[j].hasClass("collapsed")) {
-            collapsable = false;
-          }
-        }
-
-        if (collapsable) {
-          targets[i].style("display", "none");
-          collapse(targets[i]);
-          changed = true;
-        }
-        else {
-          targets[i].style("display", "element");
+      var collapsable = true;
+      var incomers = targets[i].incomers().nodes();
+      for(j=0; j<incomers.length; j++) {
+        if(!incomers[j].hasClass("collapsed")) {
+          collapsable = false;
         }
       }
+
+      if (collapsable) {
+        targets[i].style("display", "none");
+        collapse(targets[i]);
+      }
     }
-
-    node.style("background-color", colorChoice);
-
   }
+}
 
+function expand(node){
+  var i;
+  var targets = node.outgoers().nodes();
 
-}).catch(function(){alert("Please enter a valid protein accession.")});
+  if (node.style("background-color") != "rgb(255,0,0)") {
+    node.style("background-color", "#888");
+  }
+  node.removeClass("collapsed");
 
-console.timeEnd("database query");}
+  for(i=0; i<targets.length; i++) {
+    targets[i].style("display", "element");
+    if (!targets[i].hasClass("collapsed")) {
+      expand(targets[i]);
+    }
+  }
+}
