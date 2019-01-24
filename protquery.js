@@ -12,7 +12,7 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
   for (i=0; i<data.length; i++) {
     accession = data[i].accession;
-    elements.push({data: {id: accession}});
+    elements.push({data: {id:accession, name}});
     ids.push(accession)
 
     if (!data[i].interactions) {
@@ -64,6 +64,9 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
 
   cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
 
+  cy.on("mouseover", "node", function(){displayInfo(this.data("id"));});
+  cy.on("mouseout", "node", function(){document.getElementById("name").innerHTML="";});
+
   cy.on('ready', function(){
     var i;
     cy.$id(query).style("background-color", "red");
@@ -90,6 +93,8 @@ function collapse(node){
     node.style("background-color", "#666");
   }
   node.addClass("collapsed");
+  // place collapsed node on top for ease of access
+  node.style("z-index", 10);
 
   for(i=0; i<targets.length; i++) {
     if (targets[i].degree() ==1) {
@@ -128,4 +133,10 @@ function expand(node){
       expand(targets[i]);
     }
   }
+}
+
+function displayInfo(query) {
+  fetch("https://www.ebi.ac.uk/proteins/api/proteins/"+query).then(res => res.json()).then(function(data) {
+    document.getElementById("name").innerHTML = data.id;
+  });
 }
