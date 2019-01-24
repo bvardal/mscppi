@@ -3,8 +3,7 @@ console.time("database query")
 var query = document.getElementById("query").value;
 
 fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res => res.json()).then(function(data) {
-  var elements = [];
-  var ids = [];
+  var elements = [], ids = [];
   var ignore = {}
   ignore[query] = [];
 
@@ -52,60 +51,91 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
   //$(".mypanel").html(text);
   //alert(text)
 
-  var cy = cytoscape({
-    container: document.getElementById('cy'),
-    elements: elements,
-    layout: {name: 'cose'},
+  console.time("rendering");
 
-    style: [{selector: "node", style: {label: 'data(id)'}}]
+  var cy = cytoscape({
+    container: document.getElementById("cy"),
+    elements: elements,
+    layout: {name: "cose"},
+
+    style: [
+            {selector: "node", style: {label: "data(id)"}},
+           ]
 
   });
 
+  console.timeEnd("rendering");
 
   cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
 
-  //cy.on('grab', 'node', function(){this.successors().targets().grabbed();});
-
+  console.time("autocollapse")
   cy.on('ready', function(){
     var i;
-    for(i=0; i<cy.nodes().length; i++) {
-      compress(cy.nodes()[i]);
+    cy.$id(query).style("background-color", "red");
+    //cy.nodes().unselectify()
+
+    for(i=1; i<cy.nodes().length; i++) {
+      collapse(cy.nodes()[i]);
     }
-    var root = cy.nodes().roots();
-    root.style("background-color", "red");
-    cy.nodes().unselectify()
   });
+  console.timeEnd("autocollapse")
 
-  cy.on('tap', 'node', function(){compress(this);});
+  cy.on('tap', 'node', function(){collapse(this);});
 
-  function compress(node){
-    var i;
-    var targets = node.connectedEdges().targets();
+  function collapse(node){
+    var i, j;
+    var targets = node.connectedEdges().targets().nodes();
     var changed = false;
 
-    if (targets.length == 1 || node.data("id")==query) {
+    //node.edgesWith(cy.$id(query)).style("display", "none");
+
+    if (targets.length == 1) {
       return 0;
       }
 
-    if (node.style("background-color") == "rgb(153,153,153)") {
+    if (!node.hasClass("collapsed")) {
       var colorChoice = "#666";
       var displayChoice = "none"
+      node.addClass("collapsed");
     }
 
     else {
-      var colorChoice = "rgb(153,153,153)";
+      var colorChoice = "#999";
       var displayChoice = "element";
+      node.removeClass("collapsed");
     }
 
     for(i=1; i<targets.length; i++) {
       if (targets[i].degree() ==1) {
         targets[i].style("display", displayChoice);
-        node.style("background-color", colorChoice);
+        changed = true;
+      }
+
+      else {
+        var collapsable = true;
+        var incomers = targets[i].incomers().nodes();
+        for(j=0; j<incomers.length; j++) {
+          if(!incomers[j].hasClass("collapsed")) {
+            collapsable = false;
+          }
+        }
+
+        if (collapsable) {
+          targets[i].style("display", "none");
+          collapse(targets[i]);
+          changed = true;
+        }
+        else {
+          targets[i].style("display", "element");
+        }
       }
     }
+
+    node.style("background-color", colorChoice);
+
   }
 
 
 }).catch(function(){alert("Please enter a valid protein accession.")});
 
-console.timeEnd("database query")}
+console.timeEnd("database query");}
