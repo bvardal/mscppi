@@ -1,62 +1,102 @@
+var elements, ids, ignore, iquery;
+
 function BuildNetwork() {
-var query = document.getElementById("query").value;
+  elements = [], ids = [];
+  ignore = {}
+  iquery = document.getElementById("query").value;
+  ignore[iquery] = [];
+  console.time("fetch");
+  fetchAll([iquery]);
+}
 
-fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res => res.json()).then(function(data) {
-  console.time("database query")
-  var elements = [], ids = [];
-  var ignore = {}
-  ignore[query] = [];
+function fetchAll(query) {
+var offspring = [];
+var edges = [];
 
-  var i, j;
-  var text = "";
+Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"+id)
+.then(res => res.json())
+.then(function(data) {
 
-  for (i=0; i<data.length; i++) {
-    accession = data[i].accession;
-    elements.push({data: {id: accession, name: data[i].name}});
-    ids.push(accession)
+  var name = data.id.replace("_HUMAN", "");
+  try {
+    var fullName = data.protein.recommendedName.fullName.value;
+  }
+  catch {
+    var fullName = data.protein.submittedName[0].fullName.value;
+  }
+  var organism = data.organism.names[0].value;
+  organism = organism.split(" ").slice(0, 2).join(" ");
 
-    if (!data[i].interactions) {
-      continue;
-    }
+  elements.push({data: {id: data.accession, name: name, fullName:fullName, organism:organism}});
+  ids.push(data.accession);
 
-    for (j=0; j<data[i].interactions.length; j++) {
-      var interactor = data[i].interactions[j].id;
+  for(var i=0; i<data.comments.length; i++) {
+    if (data.comments[i].type == "INTERACTION") {
+      var interactors = data.comments[i].interactions;
 
-      if(interactor === undefined) {
-        continue
-      }
+      for (var j=0; j<interactors.length; j++) {
+        var interactor = interactors[j].id;
+        if(!ignore[data.accession].includes(interactor)
+           && interactor !== undefined) {
 
-      if (!ignore[accession].includes(interactor)) {
-        if (i!=0) {
-        elements.push({data: {id: interactor, name: ""}});
+          edges.push({data: {
+                      source: data.accession, 
+                      target: interactor, 
+                      // experiments: interactors[j].experiments 
+                    }});
+
+          if (!ids.includes(interactor)) {
+            offspring.push(interactor);
+            ids.push(interactor);
+            ignore[interactor] = [data.accession];
+          }
+          else {
+            ignore[interactor].push(data.accession);
+          }
         }
-        elements.push({data: {
-                               source: accession, 
-                               target: interactor, 
-                               experiments: data[i].interactions[j].experiments 
-                             }});
-      }
-
-      if (!ids.includes(interactor)) {
-        ids.push(interactor);
-        ignore[interactor] = [accession];
-      }
-      else {
-        ignore[interactor].push(accession);
       }
     }
   }
-  console.timeEnd("database query")
+})
+.catch(function() {
+  if (id == iquery) {
+    alert("Please enter a valid accession ID.");
+    return 0;
+  }
 
-  // Add elements to cytoscape container and render
-  console.time("rendering");
+  else {
+    for(var i=elements.length-1; i>=0; i--) {
+      if (elements[i].data.target == id) { 
+        elements.splice(i, 1);
+      }
+    }
+  }
+})
+))
+
+.then(function(){
+
+if (offspring.length < 200) {
+  elements = elements.concat(edges);
+  fetchAll(offspring);
+}
+
+else {
+  console.timeEnd("fetch");
+
+  console.time("render");
   var cy = cytoscape({
     container: document.getElementById("cy"),
     elements: elements,
-    layout: {name: "cose"},
-    style: [{selector: "node", style: {label: "data(id)"}}]
+    layout:{
+             name:'cose',
+             fit: true,
+             padding: 100,
+             nodeDimensionsIncludeLabels: true,
+            },
+    style: [{selector: "node", style: {label: "data(name)"}}]
   });
-  console.timeEnd("rendering");
+  console.timeEnd("render");
 
   // Define network events for click, right-click, mouseover and initial rendering
   cy.on('tap', 'node', function(){
@@ -64,42 +104,40 @@ fetch("https://www.ebi.ac.uk/proteins/api/proteins/interaction/"+query).then(res
     else {expand(this, query);}
   });
 
-  cy.on("cxttap", "node", function(){window.open("https://www.uniprot.org/uniprot/"+this.data("id"));});
-
-  cy.on("mouseover", "node", function(){
-    name = this.data("name");
-    if (name == "") {
-      getInfo(this);
-    }
-    else {
-      document.getElementById("name").innerHTML= name;
-    }
+  cy.on("cxttap", "node", function(){
+    window.open("http://ld-mjeste20.bc.ic.ac.uk:8080/isoform/"+this.data("id"));
   });
 
-  cy.on("mouseout", "node", function(){document.getElementById("name").innerHTML="";});
+  cy.on("mouseover", "node", function(){
+    var description = this.data("fullName")+" (<i>"+this.data("organism")+"</i>)";
+    document.getElementById("name").innerHTML = description;
+  });
 
-  cy.on('ready', function(){
+  cy.on("mouseout", "node", function(){
+    document.getElementById("name").innerHTML="";
+  });
+
+  cy.on('layoutstop', function(){
     var i;
-    cy.$id(query).style("background-color", "red");
+    cy.$id(iquery).style("background-color", "red");
 
     console.time("autocollapse")
-    var targets = cy.$id(query).outgoers().nodes();
+    var targets = cy.$id(iquery).outgoers().nodes();
     for(i=0; i<targets.length; i++) {
       collapse(targets[i]);
     }
     console.timeEnd("autocollapse")
   });
 
-}).catch(function(){alert("Please enter a valid protein accession.")});
+}
 
-;}
+});}
 
 function collapse(node){
-  var i, j;
   var targets = node.outgoers().nodes();
-
+  var changed = false;
   if (targets.length == 0) {return 0;}
-  
+
   if (node.style("background-color") != "rgb(255,0,0)") {
     node.style("background-color", "#666");
   }
@@ -107,15 +145,16 @@ function collapse(node){
   // place collapsed node on top for ease of access
   node.style("z-index", 10);
 
-  for(i=0; i<targets.length; i++) {
+  for(var i=0; i<targets.length; i++) {
     if (targets[i].degree() ==1) {
       targets[i].style("display", "none");
+      changed = true;
     }
 
     else {
       var collapsable = true;
       var incomers = targets[i].incomers().nodes();
-      for(j=0; j<incomers.length; j++) {
+      for(var j=0; j<incomers.length; j++) {
         if(!incomers[j].hasClass("collapsed")) {
           collapsable = false;
         }
@@ -127,10 +166,10 @@ function collapse(node){
       }
     }
   }
+
 }
 
 function expand(node){
-  var i;
   var targets = node.outgoers().nodes();
 
   if (node.style("background-color") != "rgb(255,0,0)") {
@@ -138,19 +177,10 @@ function expand(node){
   }
   node.removeClass("collapsed");
 
-  for(i=0; i<targets.length; i++) {
+  for(var i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
     if (!targets[i].hasClass("collapsed")) {
       expand(targets[i]);
     }
   }
-}
-
-function getInfo(node) {
-  var query = node.data("id");
-  fetch("https://www.ebi.ac.uk/proteins/api/proteins/"+query).then(res => res.json()).then(function(data) {
-    var name = data.id;
-    node.data("name", name);
-    document.getElementById("name").innerHTML= name;
-  });
 }
