@@ -1,0 +1,84 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <title>Tutorial 1: Getting Started</title>
+    <script src="jquery-3.3.1.min.js"></script>
+    <script src="cytoscape.min.js"></script>
+    <link href="cytoscape-context-menus.css" rel="stylesheet" type="text/css" />
+    <script src="cytoscape-cose-bilkent.js"></script>
+    <script src="cytoscape-context-menus.js"></script>
+    <script src="protquery.js"></script>
+
+    
+</head>
+
+<style>
+    #cy {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 110px;
+        left: 0px
+        ;
+    }
+    #input
+       {
+        text-align: center;
+       }
+</style>
+
+<body>
+    <div id = "input">
+    <label for="query">Please enter protein accession ID:</label>
+    <input type="text" id="query" value="P20340">
+    <button onclick="BuildNetwork()">Submit</button>
+ 
+    </div>
+
+    
+    <div id="settings">
+    <form>
+    <table border=1 align="left">
+    <tr>
+    <td><label for="cellcompcheckV2">Only highlight interactors by matching cellular component</label></td>
+    <td><input id="cellcompcheckV2" name="cellcompcheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectCC');"/></td>
+    </tr>
+    <tr>
+    <td><label for="bioproccheckV2">Only highlight interactors by matching biological process</label></td>
+    <td><input id="bioproccheckV2" name="bioproccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectBP');"/></td>
+    </tr>
+    <tr>
+    <td><label for="molfunccheckV2">Only highlight interactors by matching molecular function</label></td>
+    <td><input id="molfunccheckV2" name="molfunccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectMF');"/></td>
+    </tr>
+    </table>
+    
+    
+    <table border=1 align="center">
+    <tr>
+    <td><label for="cellcompcheck">Only display connected interactors by matching cellular component</label></td>
+    <td><input id="cellcompcheck" name="cellcompcheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectCC');"/></td>
+    </tr>
+    <tr>
+    <td><label for="bioproccheck">Only display connected interactors by matching biological process</label></td>
+    <td><input id="bioproccheck" name="bioproccheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectBP');"/></td>
+    </tr>
+    <tr>
+    <td><label for="molfunccheck">Only display connected interactors by matching molecular function</label></td>
+    <td><input id="molfunccheck" name="molfunccheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectMF');"/></td>
+    </tr>
+    </table>
+    </form>
+    </div>
+    
+    <div id="name"></div>
+    <div id="cy">
+    
+    </div>
+    <script>
+    document.getElementById('settings').style.display = 'none';
+    </script>
+</body>
+</html>
