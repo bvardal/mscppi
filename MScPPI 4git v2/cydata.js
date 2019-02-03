@@ -194,9 +194,12 @@ var contextMenu = cy.contextMenus({
       content: 'Link to PhyreRisk page',
       selector: 'node',
       onClickFunction: function (event) {
-        var target = event.target || event.cyTarget;
-        var id = target.data("id");
-        window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+id);
+      var target = event.target || event.cyTarget;
+      if (target.data("id").length == 6){
+          var id = target.data("id") + '-1'}
+      else{ 
+          var id = target.data("id")}
+      window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+id);
       },
       hasTrailingDivider: true
     },
