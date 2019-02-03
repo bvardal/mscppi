@@ -1,15 +1,19 @@
 var elements, ids, ignore, iquery;
+const categories = ["F", "P", "C"];
 
+// On new ID submission, reset elements etc.
 function BuildNetwork() {
   elements = [], ids = [];
-  ignore = {}
+  ignore = {};
   iquery = document.getElementById("query").value;
   ignore[iquery] = [];
   console.time("fetch");
   fetchAll([iquery]);
 }
 
+
 function fetchAll(query) {
+// Offspring and edges need to be reset with each iteration
 var offspring = [];
 var edges = [];
 
@@ -17,6 +21,7 @@ Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"
 .then(res => res.json())
 .then(function(data) {
 
+  // Retrieve gene name, protein name, organism
   var name = data.id.replace("_HUMAN", "");
   try {
     var fullName = data.protein.recommendedName.fullName.value;
@@ -24,35 +29,32 @@ Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"
   catch {
     var fullName = data.protein.submittedName[0].fullName.value;
   }
+
   var organism = data.organism.names[0].value;
   organism = organism.split(" ").slice(0, 2).join(" ");
-  
-  
-  var molfunclist = [];
-  var bioproclist = [];
-  var cellcomplist = [];
-  
-  for (x=0; x<data.dbReferences.length; x++) {
-      if (data.dbReferences[x].type == "GO") {
-          if (data.dbReferences[x].properties.term.startsWith("F")){
-              molfunclist.push(data.dbReferences[x].properties.term.slice(2))
-          }
-          
-          else if (data.dbReferences[x].properties.term.startsWith("P")){
-              bioproclist.push(data.dbReferences[x].properties.term.slice(2))
-          }
-          
-          else if (data.dbReferences[x].properties.term.startsWith("C")){
-              cellcomplist.push(data.dbReferences[x].properties.term.slice(2))
-          }
-          
+
+  // Retrieve GO terms
+  var GO = {"F":[], "P":[], "C":[]};
+
+  for (var i=0; i<data.dbReferences.length; i++) {
+      if (data.dbReferences[i].type == "GO") {
+          var term = data.dbReferences[i].properties.term
+          GO[term.charAt(0)].push(term.slice(2));
       }
   }
 
-  elements.push({data: {id: data.accession, name: name, fullName:fullName, organism:organism, molfunclist:molfunclist, bioproclist:bioproclist, cellcomplist:cellcomplist}});
+  // Push node to elements with relevant information
+  elements.push({data: {
+                 id: data.accession, 
+                 name: name,
+                 fullName: fullName,
+                 organism: organism,
+                 GO: GO,
+                 commonGO: {}
+                }});
+
   ids.push(data.accession);
-  
-      
+
   for(var i=0; i<data.comments.length; i++) {
     if (data.comments[i].type == "INTERACTION") {
       var interactors = data.comments[i].interactions;
@@ -62,6 +64,7 @@ Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"
         if(!ignore[data.accession].includes(interactor)
            && interactor !== undefined) {
 
+          // Push edge to data
           edges.push({data: {
                       source: data.accession, 
                       target: interactor, 
@@ -87,6 +90,7 @@ Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"
     return 0;
   }
 
+  // If new node is invalid, remove all associated edges
   else {
     for(var i=elements.length-1; i>=0; i--) {
       if (elements[i].data.target == id) { 
@@ -107,13 +111,10 @@ if (offspring.length < 200) {
 else {
 
   console.timeEnd("fetch");
-  var script2 = document.createElement("script");
-  script2.src = ("cydata.js")
-  document.head.appendChild(script2);
+  var script = document.createElement("script");
+  script.src = ("cydata.js")
+  document.head.appendChild(script);
 }
 });
 } 
-  
-
-
    

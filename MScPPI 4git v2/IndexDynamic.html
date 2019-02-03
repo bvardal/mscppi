@@ -3,7 +3,7 @@
 <html>
 
 <head>
-    <title>Tutorial 1: Getting Started</title>
+    <title>Network visualisation</title>
     <script src="jquery-3.3.1.min.js"></script>
     <script src="cytoscape.min.js"></script>
     <link href="cytoscape-context-menus.css" rel="stylesheet" type="text/css" />
@@ -23,7 +23,7 @@
         left: 0px
         ;
     }
-    #input
+    #input, #settings, #name
        {
         text-align: center;
        }
@@ -43,20 +43,20 @@
     <table border=1 align="left">
     <tr>
     <td><label for="cellcompcheckV2">Only highlight interactors by matching cellular component</label></td>
-    <td><input id="cellcompcheckV2" name="cellcompcheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectCC');"/></td>
+    <td><input id="cellcompcheckV2" name="cellcompcheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectC');"/></td>
     </tr>
     <tr>
     <td><label for="bioproccheckV2">Only highlight interactors by matching biological process</label></td>
-    <td><input id="bioproccheckV2" name="bioproccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectBP');"/></td>
+    <td><input id="bioproccheckV2" name="bioproccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectP');"/></td>
     </tr>
     <tr>
     <td><label for="molfunccheckV2">Only highlight interactors by matching molecular function</label></td>
-    <td><input id="molfunccheckV2" name="molfunccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectMF');"/></td>
+    <td><input id="molfunccheckV2" name="molfunccheck" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectF');"/></td>
     </tr>
     </table>
     
     
-    <table border=1 align="center">
+    <table border=1 align="right">
     <tr>
     <td><label for="cellcompcheck">Only display connected interactors by matching cellular component</label></td>
     <td><input id="cellcompcheck" name="cellcompcheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectCC');"/></td>
