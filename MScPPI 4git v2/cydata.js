@@ -45,9 +45,9 @@ var cy = cytoscape({
   container: document.getElementById('cy'),
   elements: elements,
   layout:{
-    name:'cose',
+    name:'cose-bilkent',
     fit: true,
-    padding: 250,
+    padding: 75,
     nodeDimensionsIncludeLabels: true,
   },
   style: [
@@ -122,6 +122,45 @@ function OptionfilterV2(checkboxid, optionClass) {
   }
 }
 
+
+var checkevents = [];   
+      
+function Optionfilter(checkboxid, optionclass) {
+ if (checkboxid.checked){
+     
+     checkevents.push(optionclass)
+     cy.$(optionclass).style({'text-opacity': '0', visibility: 'hidden'});
+     cy.$(optionclass).connectedEdges().style({visibility: 'hidden'});
+     var sparenodes = cy.collection();
+     for (y=0; y < cy.nodes(optionclass).successors().nodes(':visible').length; y++){
+            if (cy.nodes(optionclass).successors().nodes(':visible')[y].connectedEdges(':visible').connectedNodes(queryNode).length == 0) {
+                sparenodes = sparenodes.union(cy.nodes(optionclass).successors().nodes(':visible')[y])}}
+                sparenodes.style({'text-opacity': '0', visibility: 'hidden'});
+                sparenodes.connectedEdges().style({visibility: 'hidden'})}
+ else {
+    
+    checkevents.splice(checkevents.indexOf(optionclass), 1);
+    cy.nodes().style({'text-opacity': '1', visibility: 'visible'});
+    cy.nodes().connectedEdges().style({visibility:'visible'});
+    if (checkevents.length != 0){
+        
+        for (z=0; z < checkevents.length; z++) {
+            
+            cy.$(checkevents[z]).style({'text-opacity': '0', visibility: 'hidden'});
+            cy.$(checkevents[z]).connectedEdges().style({visibility: 'hidden'});
+             var sparenodes = cy.collection();
+             for (y=0; y < cy.nodes(checkevents[z]).successors().nodes(':visible').length; y++){
+                if (cy.nodes(checkevents[z]).successors().nodes(':visible')[y].connectedEdges(':visible').connectedNodes(queryNode).length == 0) {
+                sparenodes = sparenodes.union(cy.nodes(checkevents[z]).successors().nodes(':visible')[y])}}
+                sparenodes.style({'text-opacity': '0', visibility: 'hidden'});
+                sparenodes.connectedEdges().style({visibility: 'hidden'})}
+    }
+}
+}
+
+
+
+
 cy.on('tap', 'node', function(){
   if (!this.hasClass("collapsed")) {collapse(this, query);}
   else {expand(this, query);}
@@ -144,7 +183,7 @@ cy.on('layoutstop', function(){
     collapse(targets[i]);
   }
   console.timeEnd("autocollapse")
-  cy.fit(queryNode.outgoers().nodes());
+  cy.center(queryNode);
 });
 
 var contextMenu = cy.contextMenus({
