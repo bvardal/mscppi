@@ -45,10 +45,11 @@ var cy = cytoscape({
   container: document.getElementById('cy'),
   elements: elements,
   layout:{
-    name:'cose-bilkent',
+    name:'cose',
     fit: true,
-    padding: 75,
+    padding: 25,
     nodeDimensionsIncludeLabels: true,
+    nodeRepulsion: 300000
   },
   style: [
     {
