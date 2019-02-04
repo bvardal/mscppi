@@ -1,10 +1,15 @@
 # mscppi
 
 ## files
-cytoscape.min.js: Pre-written JavaScript implementation of CytoScape by Franz et al. (2016) 
+IndexDynamic.html: Webpage for network visualisation
+protquery.js: Associated JS script to fetch network data, generate and alter network
 
-interactors.py: Python script to query PhyreRisk REST API for the interactome around a query protein
+cytoscape.min.js: Pre-written JS implementation of CytoScape by Franz et al. (2016) 
+Accessed from https://github.com/cytoscape/cytoscape.js
 
-elements.js: Example .js file containing data in JavaScript object format
+cytoscape-context-menus.js: Pre-written cytoscape.js context menu implementation by Siper & Dogrusoz
+cytoscape-context-menus.css: Associated context menu CSS stylesheet
+Both accessed from https://github.com/iVis-at-Bilkent/cytoscape.js-context-menus
 
-network.html: Simple graph visualisation page
+jquery-3.3.1.min.js: Pre-written JS script required by cytoscape-context-menus.js
+Accessed from https://github.com/jquery/jquery
