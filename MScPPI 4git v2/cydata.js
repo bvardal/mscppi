@@ -88,7 +88,7 @@ for (var i=0; i<3; i++) {
     }
 
     else {
-      cy.nodes()[j].data("commonGO")[categories[i]] = intersect.toString();
+      cy.nodes()[j].data("commonGO")[categories[i]] = intersect.join(", ");
     }
   }
 }
