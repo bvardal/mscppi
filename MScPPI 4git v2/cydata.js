@@ -212,7 +212,7 @@ var contextMenu = cy.contextMenus({
         alert('Shared cellular component:  ' + target.data("commonGO").C + '\n\n' + 
         'Shared biological process:  ' + target.data("commonGO").P + '\n\n' + 'Shared molecular function:  ' + target.data("commonGO").F)
         },
-    hasTrailingDivider: true
+      hasTrailingDivider: true
     },
     {
       id: 'Diseaseinvolement',
@@ -232,6 +232,4 @@ var contextMenu = cy.contextMenus({
       },
       hasTrailingDivider: true
    }
-        
-    
 ]});
