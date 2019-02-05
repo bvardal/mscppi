@@ -1,0 +1,111 @@
+<!doctype html>
+
+<html>
+<head>
+    <title>Network visualisation</title>
+    <script src="jquery-3.3.1.min.js"></script>
+    <script src="cytoscape.min.js"></script>
+    <script src="cytoscape-context-menus.js"></script>
+    <script src="protquery.js"></script>
+    <link href="cytoscape-context-menus.css" rel="stylesheet" type="text/css" />
+</head>
+
+<style>
+    #cy {
+       width: 100%;
+       height: 100%;
+       position: absolute;
+       top: 160px;
+       left: 0px;
+    }
+    #input, #name {
+      text-align: center;
+    }
+    #name {
+      padding: 30px;
+    }
+    #dropdown {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 0;
+      padding: 10px;
+    }
+    #settings {
+      display: none;
+      position: fixed;
+      top: 50px;
+      left: 0;
+      padding: 10px;
+    }
+    #settings2 {
+      display: none;
+      position: fixed;
+      top: 50px;
+      left: 0;
+      padding: 10px;
+    }
+</style>
+
+<body>
+    <div id="dropdown">
+    <table>
+    <tr>
+    <td>Select a filtering method: </td>
+    <td>
+    <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
+    <option value = "settings">Filtered proteins become more transparent but remain visible (Recommended)</option>
+    <option value = "settings2">Filtered proteins are removed along with proteins without a path to the query</option>
+    </select>
+    </td>
+    </tr>
+    </table>
+    </div>
+    
+    <div id="settings">
+    <table border=1 align="left">
+    <tr><td colspan=2> Only highlight interactors with matching:</td></tr>
+    <tr>
+    <td>Cellular component</td>
+    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectC');"/></td>
+    </tr>
+    <tr>
+    <td>Biological process</td>
+    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectP');"/></td>
+    </tr>
+    <tr>
+    <td>Molecular function</td>
+    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectF');"/></td>
+    </tr>
+    </table>
+    </div>
+    
+    <div id="settings2">
+    <table border=1 align="left">
+    <tr><td colspan=2> Only highlight interactors with matching:</td></tr>
+    <tr>
+    <td>Cellular component</td>
+    <td><input type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectC');"/></td>
+    </tr>
+    <tr>
+    <td>Biological process</td>
+    <td><input type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectP');"/></td>
+    </tr>
+    <tr>
+    <td>Molecular function</td>
+    <td><input type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectF');"/></td>
+    </tr>
+    </table>
+    </div>
+    
+
+    <div id = "input">
+    <label for="query">Please enter protein accession ID:</label>
+    <input type="text" id="query" value="P20340">
+    <button onclick="BuildNetwork()">Submit</button>
+    </div>
+
+    <div id="name"></div>
+    <div id="cy"></div>
+</body>
+</html>
