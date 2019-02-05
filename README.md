@@ -2,6 +2,7 @@
 
 ## Files
 **IndexDynamic.html**: Webpage for network visualisation
+
 **protquery.js**: Associated JS script to fetch network data, generate and alter network
 
 **cytoscape.min.js**: Pre-written JS implementation of CytoScape by Franz et al. (2016)<br/>
