@@ -167,7 +167,7 @@ queryNode.style({"background-color": "red"});
 // (Replace later with checkbox to highlight nodes with known structure)
 for (var i=0; i<cy.nodes().length; i++) {
   if (cy.nodes()[i].data("structure") != "none") {
-    cy.nodes()[i].style("border-width", "5");
+    cy.nodes()[i].style({"border-width": "5", "border-color" : "orange"});
   }
 }
 
@@ -226,11 +226,13 @@ cy.on("layoutstop", function(){
   for(var i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
-  for (z=0; z<cy.nodes('.collapsed').length; z++){
+  tobeexpanded = cy.collection();
+    for (z=0; z<cy.nodes('.collapsed').length; z++){
         if (cy.nodes('.collapsed')[z].connectedEdges(':visible').length == cy.nodes('.collapsed')[z].connectedEdges().length){
-            expand(cy.nodes('.collapsed')[z]);
+            tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
         }
     }
+  expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
 });
@@ -301,6 +303,7 @@ function DisplaySettings(method){
     document.getElementById("settings").style.display = "none";
     document.getElementById("settings2").style.display = "none";
     document.getElementById(method).style.display = "block";
+    
 }
 
 
@@ -417,12 +420,14 @@ controldic = {};
 
 function expandcontrol(node){
     controldic[node.id()] = [];
+    tobeexpanded = cy.collection();
     for (z=0; z<cy.nodes('.collapsed').length; z++){
         if (cy.nodes('.collapsed')[z].connectedEdges(':visible').length == cy.nodes('.collapsed')[z].connectedEdges().length){
             controldic[node.id()].push(cy.nodes('.collapsed')[z])
-            expand(cy.nodes('.collapsed')[z])
+            tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
         }
     }
+    expand(tobeexpanded)
 }
 
 function collapsecontrol(node){
