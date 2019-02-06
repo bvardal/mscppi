@@ -18,78 +18,53 @@ function fetchAll(query) {
 var offspring = [];  // New nodes that will be queried in next iteration
 var edges = [];  // Edges that are saved in memory in case they need to be added
 
-Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"+id)
+Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
 .then(res => res.json())
 .then(function(data) {
-  // Retrieve gene name, protein name, organism
-  var name = data.id.replace("_HUMAN", "");
-  try {
-    var fullName = data.protein.recommendedName.fullName.value;
-  }
-  catch {
-    var fullName = data.protein.submittedName[0].fullName.value;
-  }
-
-  var organism = data.organism.names[0].value;
-  organism = organism.split(" ").slice(0, 2).join(" ");
-
-  // Retrieve GO terms and method of structure determination (if given)
+  // Generate GO object
   var GO = {"F":[], "P":[], "C":[]};
 
-  for (var i=0; i<data.dbReferences.length; i++) {
-      if (data.dbReferences[i].type == "GO") {
-          var term = data.dbReferences[i].properties.term
-          GO[term.charAt(0)].push(term.slice(2));
-      }
-    else if (data.dbReferences[i].type == "PDB") {
-      var structure = data.dbReferences[i].properties.method;
-    }
+  // Populate appropriate arrays with terms
+  for (var i=0; i<data.goTerms.length; i++) {
+    var term = data.goTerms[i].properties.term
+    GO[term.charAt(0)].push(term.slice(2));
   }
 
-  if (structure === undefined) {
-    structure = "none";
-  }
+  var structure = (data.experimentalStructures.length >= 0);
 
   // Push node to elements with relevant information
   elements.push({data: {
-    id: data.accession, 
-    name: name,
-    fullName: fullName,
-    organism: organism,
+    id: data.uniprotAccession, 
+    name: data.entryName.replace("_HUMAN", ""),
+    fullName: data.recommendedName,
     GO: GO,
     structure: structure,
     commonGO: {}
   }});
 
-  ids.push(data.accession);
+  ids.push(data.uniprotAccession);
 
   // Retrieve interactors
-  for(var i=0; i<data.comments.length; i++) {
-    if (data.comments[i].type == "INTERACTION") {
-      var interactors = data.comments[i].interactions;
+  for(var i=0; i<data.interactor.length; i++) {
+    var interactor = data.interactor[j].id;
+    if(!ignore[data.accession].includes(interactor)
+       && interactor !== undefined
+       && !interactor.organismDiffers) {
 
-      for (var j=0; j<interactors.length; j++) {
-        var interactor = interactors[j].id;
-        if(!ignore[data.accession].includes(interactor)
-           && interactor !== undefined) {
+      // Push edge to array for later use
+      edges.push({data: {
+        source: data.uniprotAccession, 
+        target: interactor, 
+      }});
 
-          // Push edge to array for later use
-          edges.push({data: {
-            source: data.accession, 
-            target: interactor, 
-            // experiments: interactors[j].experiments 
-          }});
-
-          if (!ids.includes(interactor)) {
-            offspring.push(interactor);   
-            ids.push(interactor);
-            // Ignore previously encountered binary interactions
-            ignore[interactor] = [data.accession]; 
-          }
-          else {
-            ignore[interactor].push(data.accession);
-          }
-        }
+      if (!ids.includes(interactor)) {
+        offspring.push(interactor);   
+        ids.push(interactor);
+        // Ignore previously encountered binary interactions
+        ignore[interactor] = [data.accession]; 
+      }
+      else {
+        ignore[interactor].push(data.accession);
       }
     } 
   }
