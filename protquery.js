@@ -1,5 +1,5 @@
 // Declare global variables that need to be reused
-var cy, elements, ids, ignore, iquery;
+var cy, elements, ids, ignore, iquery, queryNode;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 
@@ -22,23 +22,24 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 .then(res => res.json())
 .then(function(data) {
   // Push node to elements with relevant information
-  elements.push({data: {
-    id: id,
-    name: data.entryName.replace("_HUMAN", ""),
-    fullName: data.recommendedName,
-  }});
-
+  var self = false;
   ids.push(id);
 
   // Retrieve interactors
-  var interactors = data.interactor
+  var interactors = data.interactor;
   for(var i=0; i<interactors.length; i++) {
-    var interactor = interactors[i].accession;
-
+    try {
+      var interactor = interactors[i].accession.replace(/-1$/, "");
+    }
+    catch {
+      console.log(JSON.stringify(interactors[i]));
+      continue;
+    }
     if(interactor != null
        && !ignore[id].includes(interactor)
        && !flagged.includes(interactor)
        && !interactors[i].organismDiffers) {
+
 
       // Push edge to array for later use
       edges.push({data: {
@@ -57,6 +58,14 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       }
     } 
   }
+
+  elements.push({data: {
+    id: id,
+    name: data.entryName.replace("_HUMAN", ""),
+    fullName: data.recommendedName,
+    self: self
+  }});
+
 })
 .catch(function() {
   // If error is encountered for initial query, submitted ID is likely invalid
@@ -104,7 +113,7 @@ cy = cytoscape({
       style: {
       "background-color": "blue",
       "text-wrap": "wrap",
-      label: "data(name)",
+      label: "data(id)",
       "font-size": "13px",
       "border-color": "gold",
       "border-width": 0
@@ -154,7 +163,7 @@ cy.on("layoutstop", function(){
   console.time("autocollapse")
   var targets = queryNode.outgoers().nodes();
   for(var i=0; i<targets.length; i++) {
-    collapse(targets[i]);
+    // collapse(targets[i]);
   }
   console.timeEnd("autocollapse")
   cy.center(queryNode);
@@ -250,7 +259,9 @@ function Optionfilter(checkBoxID, optionClass) {
 
 function collapse(node){
   var targets = node.outgoers().nodes();
-  if (targets.length == 0) {return 0;}
+  if (targets.length == 0) {
+    return 0;
+  }
 
   node.addClass("collapsed");
   node.style("shape", "rectangle")
