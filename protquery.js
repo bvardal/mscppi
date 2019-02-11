@@ -202,7 +202,7 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName")+" (<i>"+this.data("organism")+"</i>)";
+  var description = this.data("fullName");
   document.getElementById("name").innerHTML = description;
 });
 
