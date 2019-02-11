@@ -219,7 +219,7 @@ cy.on("layoutstop", function(){
   }
   console.timeEnd("autocollapse")
   cy.center(queryNode);
-  cy.panBy({x:-250});
+  cy.panBy({x:-225, y:-75});
 });
 
 // Define right-click context menu
