@@ -33,7 +33,6 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   var structure = (data.experimentalStructures.length >= 0);
 
   // Push node to elements with relevant information
-  console.log(id + " THE QUERY ID");
   elements.push({data: {
     id: id,
     name: id,
