@@ -33,27 +33,30 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   var structure = (data.experimentalStructures.length >= 0);
 
   // Push node to elements with relevant information
+  console.log(id + " THE QUERY ID");
   elements.push({data: {
-    id: data.uniprotAccession, 
-    name: data.entryName.replace("_HUMAN", ""),
+    id: id,
+    name: id,
+    // name: data.entryName.replace("_HUMAN", "")
     fullName: data.recommendedName,
     GO: GO,
     structure: structure,
     commonGO: {}
   }});
 
-  ids.push(data.uniprotAccession);
+  ids.push(id);
 
   // Retrieve interactors
-  for(var i=0; i<data.interactor.length; i++) {
-    var interactor = data.interactor[j].id;
-    if(!ignore[data.accession].includes(interactor)
-       && interactor !== undefined
-       && !interactor.organismDiffers) {
+  var interactors = data.interactor
+  for(var i=0; i<interactors.length; i++) {
+    var interactor = interactors[i].accession;
+
+    if(!ignore[id].includes(interactor)
+       && !interactors[i].organismDiffers) {
 
       // Push edge to array for later use
       edges.push({data: {
-        source: data.uniprotAccession, 
+        source: id, 
         target: interactor, 
       }});
 
@@ -87,7 +90,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 500 interactors
-if (offspring.length < 500) {
+if (offspring.length < 5) {
   elements = elements.concat(edges);
   fetchAll(offspring);
 }
@@ -170,7 +173,7 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName")+" (<i>"+this.data("organism")+"</i>)";
+  var description = this.data("fullName");
   document.getElementById("name").innerHTML = description;
 });
 
