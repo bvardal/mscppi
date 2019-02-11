@@ -5,7 +5,7 @@ var checkEvents = [];
 
 // On new ID submission, reset elements etc.
 function BuildNetwork() {
-  elements = [], ids = [];
+  elements = [], ids = [], flagged = [];
   ignore = {};
   iquery = document.getElementById("query").value.replace("-1", "");
   ignore[iquery] = [];
@@ -21,26 +21,11 @@ var edges = [];  // Edges that are saved in memory in case they need to be added
 Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
 .then(res => res.json())
 .then(function(data) {
-  // Generate GO object
-  var GO = {"F":[], "P":[], "C":[]};
-
-  // Populate appropriate arrays with terms
-  for (var i=0; i<data.goTerms.length; i++) {
-    var term = data.goTerms[i].properties.term
-    GO[term.charAt(0)].push(term.slice(2));
-  }
-
-  var structure = (data.experimentalStructures.length >= 0);
-
   // Push node to elements with relevant information
   elements.push({data: {
     id: id,
-    name: id,
-    // name: data.entryName.replace("_HUMAN", "")
+    name: data.entryName.replace("_HUMAN", ""),
     fullName: data.recommendedName,
-    GO: GO,
-    structure: structure,
-    commonGO: {}
   }});
 
   ids.push(id);
@@ -50,7 +35,9 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   for(var i=0; i<interactors.length; i++) {
     var interactor = interactors[i].accession;
 
-    if(!ignore[id].includes(interactor)
+    if(interactor != null
+       && !ignore[id].includes(interactor)
+       && !flagged.includes(interactor)
        && !interactors[i].organismDiffers) {
 
       // Push edge to array for later use
@@ -60,13 +47,13 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       }});
 
       if (!ids.includes(interactor)) {
-        offspring.push(interactor);   
+        offspring.push(interactor);
         ids.push(interactor);
         // Ignore previously encountered binary interactions
-        ignore[interactor] = [data.accession]; 
+        ignore[interactor] = [id]; 
       }
       else {
-        ignore[interactor].push(data.accession);
+        ignore[interactor].push(id);
       }
     } 
   }
@@ -80,8 +67,9 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 
   // If a new node being queried is invalid, remove all associated edges
   else {
-    for(var i=elements.length-1; i>=0; i--) {
-      if (elements[i].data.target == id) { 
+    flagged.push(id);
+    for (var i=elements.length-1; i>=0; i--) {
+      if (elements[i].data.target == id) {
         elements.splice(i, 1);
       }
     }
@@ -89,13 +77,14 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 500 interactors
-if (offspring.length < 5) {
+if (offspring.length < 200) {
   elements = elements.concat(edges);
   fetchAll(offspring);
 }
 
 else {
 console.timeEnd("fetch");
+console.log(elements.length, "total elements");
 
 // Once recursion has ended, generate and layout network
 console.time("layout");
@@ -144,26 +133,6 @@ for (var i=0; i<cy.nodes().length; i++) {
 // Once network is rendered, display settings
 document.getElementById("settings").style.display = "block";
 
-// Work out shared GO terms between all nodes and query (root) node
-console.time("intersection");
-for (var i=0; i<3; i++) {  // Loop through categories
-  for (var j=1; j<cy.nodes().length; j++) {  // Loop through nodes excluding query
-    var queryGO = queryNode.data("GO")[categories[i]];
-    var targetGO = cy.nodes()[j].data("GO")[categories[i]];
-    
-    var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
-    
-    if (intersect.length == 0) {
-      cy.nodes()[j].addClass("reject" + categories[i]);
-      cy.nodes()[j].data("commonGO")[categories[i]] = "none";
-    }
-
-    else {
-      cy.nodes()[j].data("commonGO")[categories[i]] = intersect.join(", ");
-    }
-  }
-}
-console.timeEnd("intersection");
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
@@ -279,7 +248,7 @@ function Optionfilter(checkBoxID, optionClass) {
 
 // Define node collapse and expansion functions
 
-function collapse(node, label){
+function collapse(node){
   var targets = node.outgoers().nodes();
   if (targets.length == 0) {return 0;}
 
