@@ -55,7 +55,7 @@ Promise.all(query.map(id => fetch("https://www.ebi.ac.uk/proteins/api/proteins/"
     id: data.accession, 
     name: name,
     fullName: fullName,
-    organism: organism,
+    organismDiffers: (organism != "Homo sapiens"),
     GO: GO,
     structure: structure,
     commonGO: {}
@@ -160,7 +160,7 @@ queryNode.style({"background-color": "red"});
 // (Replace later with checkbox to highlight nodes with known structure)
 for (var i=0; i<cy.nodes().length; i++) {
   if (cy.nodes()[i].data("structure") != "none") {
-    cy.nodes()[i].style("border-width", "5");
+   // cy.nodes()[i].style("border-width", "5");
   }
 }
 
@@ -169,20 +169,27 @@ document.getElementById("settings").style.display = "block";
 
 // Work out shared GO terms between all nodes and query (root) node
 console.time("intersection");
-for (var i=0; i<3; i++) {  // Loop through categories
-  for (var j=1; j<cy.nodes().length; j++) {  // Loop through nodes excluding query
-    var queryGO = queryNode.data("GO")[categories[i]];
-    var targetGO = cy.nodes()[j].data("GO")[categories[i]];
+for (var i=1; i<cy.nodes().length; i++) {  // Loop through nodes excluding query
+  if (cy.nodes()[i].data("organismDiffers") == true) {
+    cy.nodes()[i].addClass("nonHuman");
+  }
+
+  if (cy.nodes()[i].data("structure") == "none") {
+    cy.nodes()[i].addClass("noStruc");
+  }
+
+  for (var j=0; j<3; j++) {  // Loop through GO categories
+    var queryGO = queryNode.data("GO")[categories[j]];
+    var targetGO = cy.nodes()[i].data("GO")[categories[j]];
     
     var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
     
     if (intersect.length == 0) {
-      cy.nodes()[j].addClass("reject" + categories[i]);
-      cy.nodes()[j].data("commonGO")[categories[i]] = "none";
+      cy.nodes()[i].addClass("reject" + categories[j]);
+      cy.nodes()[i].data("commonGO")[categories[j]] = "none";
     }
-
     else {
-      cy.nodes()[j].data("commonGO")[categories[i]] = intersect.join(", ");
+      cy.nodes()[i].data("commonGO")[categories[j]] = intersect.join(", ");
     }
   }
 }
@@ -212,6 +219,7 @@ cy.on("layoutstop", function(){
   }
   console.timeEnd("autocollapse")
   cy.center(queryNode);
+  cy.panBy({x:-250});
 });
 
 // Define right-click context menu
@@ -288,14 +296,12 @@ function Optionfilter(checkBoxID, optionClass) {
       "width": "4"
     });
 
-    if (checkEvents.length != 0){
-      for (var i =0; i < checkEvents.length; i++) {
-        cy.$(checkEvents[i]).style("opacity", 0.1);
-        cy.$(checkEvents[i]).connectedEdges().style({
-          "line-style": "dashed", 
-          "width": "2"
-        });
-      }
+    for (var i =0; i < checkEvents.length; i++) {
+      cy.$(checkEvents[i]).style("opacity", 0.1);
+      cy.$(checkEvents[i]).connectedEdges().style({
+        "line-style": "dashed", 
+        "width": "2"
+      });
     }
   }
 }
