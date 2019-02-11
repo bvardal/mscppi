@@ -22,24 +22,27 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 .then(res => res.json())
 .then(function(data) {
   // Push node to elements with relevant information
-  var self = false;
   ids.push(id);
+
+  elements.push({data: {
+    id: id,
+    name: data.entryName.replace("_HUMAN", ""),
+    fullName: data.recommendedName,
+  }});
 
   // Retrieve interactors
   var interactors = data.interactor;
+
   for(var i=0; i<interactors.length; i++) {
-    try {
-      var interactor = interactors[i].accession.replace(/-1$/, "");
+    if (interactors[i].accession== null) {
+      continue
     }
-    catch {
-      console.log(JSON.stringify(interactors[i]));
-      continue;
-    }
-    if(interactor != null
-       && !ignore[id].includes(interactor)
+
+    var interactor = interactors[i].accession.replace(/-\d$/, "");
+
+    if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)
        && !interactors[i].organismDiffers) {
-
 
       // Push edge to array for later use
       edges.push({data: {
@@ -56,22 +59,14 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       else {
         ignore[interactor].push(id);
       }
-    } 
+    }
   }
-
-  elements.push({data: {
-    id: id,
-    name: data.entryName.replace("_HUMAN", ""),
-    fullName: data.recommendedName,
-    self: self
-  }});
-
 })
 .catch(function() {
   // If error is encountered for initial query, submitted ID is likely invalid
   if (id == iquery) {
-    alert("Please enter a valid accession ID.");
-    return 0;
+    console.timeEnd("fetch");
+    throw new Error("Invalid accession ID.");
   }
 
   // If a new node being queried is invalid, remove all associated edges
@@ -115,8 +110,6 @@ cy = cytoscape({
       "text-wrap": "wrap",
       label: "data(id)",
       "font-size": "13px",
-      "border-color": "gold",
-      "border-width": 0
       }
     },
     {
@@ -130,14 +123,6 @@ console.timeEnd("layout");
 // Colour query node 
 var queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
-
-// Add coloured border to nodes with known structure
-// (Replace later with checkbox to highlight nodes with known structure)
-for (var i=0; i<cy.nodes().length; i++) {
-  if (cy.nodes()[i].data("structure") != "none") {
-    cy.nodes()[i].style("border-width", "5");
-  }
-}
 
 // Once network is rendered, display settings
 document.getElementById("settings").style.display = "block";
@@ -163,7 +148,7 @@ cy.on("layoutstop", function(){
   console.time("autocollapse")
   var targets = queryNode.outgoers().nodes();
   for(var i=0; i<targets.length; i++) {
-    // collapse(targets[i]);
+    collapse(targets[i]);
   }
   console.timeEnd("autocollapse")
   cy.center(queryNode);
@@ -292,8 +277,6 @@ function expand(node){
   node.style("shape", "ellipse");
   for(var i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
-    if (!targets[i].hasClass("collapsed")) {
-      expand(targets[i]);
-    }
+    expand(targets[i]);
   }
 }
