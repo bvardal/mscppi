@@ -3,6 +3,15 @@ var cy, elements, ids, ignore, iquery, queryNode;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 
+function altName(target, alternative) {
+  if (!target) {
+    return alternative;
+  }
+  else {
+    return target;
+  }
+}
+
 // On new ID submission, reset elements etc.
 function BuildNetwork() {
   elements = [], ids = [], flagged = [];
@@ -35,7 +44,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   var interactors = data.interactor;
 
   for(var i=0; i<interactors.length; i++) {
-    if (interactors[i].accession === null) {
+    if (!interactors[i].accession) {
       continue
     }
 
@@ -59,17 +68,10 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
           // Non-human protein won't have a database page
           // Therefore a node is pushed with the available information
 
-          if (interactors[i].label === null) {
-            var label = interactor.toLowerCase();
-          }
-          else {
-            var label = interactors[i].label.toLowerCase()
-          }
-
           edges.push({data: {
             id: interactor,
-            name: label,
-            fullname: interactors[i].recommededName,
+            name: altName(interactors[i].label, interactor).toLowerCase(),
+            fullName: altName(interactors[i].recommededName, "(Non-human)"),
             organismDiffers: true
           }});
         }
@@ -105,7 +107,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 500 interactors
-if (offspring.length < 200) {
+if (offspring.length < 50) {
   elements = elements.concat(edges);
   fetchAll(offspring);
 }
@@ -159,7 +161,7 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName");
+  var description = this.data("fullName")+ " ("+this.data("id")+")";
   document.getElementById("name").innerHTML = description;
 });
 

@@ -1,12 +1,21 @@
 // Declare global variables that need to be reused
-var cy, elements, ids, ignore, iquery, queryNode;
+var cy, elements, ids, ignore, iquery, queryNode, flagged;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
 
+function altName(target, alternative) {
+  if (!target) {
+    return alternative;
+  }
+  else {
+    return target;
+  }
+}
+
 // On new ID submission, reset elements etc.
 function BuildNetwork() {
-  elements = [], ids = [];
+  elements = [], ids = [], flagged=[];
   ignore = {};
   iquery = document.getElementById("query").value.replace("-1", "");
   ignore[iquery] = [];
@@ -45,7 +54,63 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       var phyremodel = data.phyreModels[y].model_path;
       phyremodels.push(phyremodel);
   }
-  
+
+  // Retrieve interactors
+  var interactors = data.interactor;
+  var selfInteract = false;
+
+  for(var i=0; i<interactors.length; i++) {
+    if (!interactors[i].accession) {
+      if (interactors[i].intactId2 == data.intactId1) {
+        selfInteract = true;
+      }
+      continue
+    }
+
+    var interactor = interactors[i].accession.replace(/-\d$/, "");
+
+    if(!ignore[id].includes(interactor)) {
+
+      // Push edge to array for later use
+      edges.push({data: {
+        source: id, 
+        target: interactor,
+      }});
+
+      if (!ids.includes(interactor)) {
+        ids.push(interactor);
+        // Ignore previously encountered binary interactions
+        ignore[interactor] = [id];
+
+        if (interactors[i].organismDiffers) {
+          // Non-human protein won't have a database page
+          // Therefore a node is pushed with the available information
+
+          edges.push({data: {
+            id: interactor,
+            name: altName(interactors[i].label, interactor).toLowerCase(),
+            fullName: altName(interactors[i].recommededName, "(Non-human)"),
+            organismDiffers: true,
+            GO: GO,
+            structures: [],
+            phyremodels: [],
+            commonGO: {},
+            selfInteract: selfInteract
+          }});
+        }
+
+        else {
+          // Prepare to query interactor itself in next iteration
+          offspring.push(interactor); 
+        }
+
+      }
+      else {
+        ignore[interactor].push(id);
+      }
+    }
+  }
+
   // Push node to elements with relevant information
   elements.push({data: {
     id: id, 
@@ -54,66 +119,22 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     GO: GO,
     structures: structures,
     phyremodels: phyremodels,
-    commonGO: {}
+    commonGO: {},
+    selfInteract: selfInteract
   }});
-  
-  ids.push(id);
-  // Retrieve interactors
-  for(var j=0; j<data.interactor.length; j++) {
-        var interactors = data.interactor;
-        var interactor = interactors[j].accession;
-        if(!ignore[id].includes(interactor)
-           && interactor) {
-        
-          // Push edge to array for later use
-            edges.push({data: {
-            source: id, 
-            target: interactor, 
-            // experiments: interactors[j].experiments 
-          }});
-        
-          if (interactors[j].organismDiffers){
-                name = interactors[j].entryName
-                if (!name) {name = interactors[j].label}
-                
-                nonhuman.push({data: {
-                id: interactors[j].accession, 
-                name: name,
-                fullName: interactors[j].recommendedName,
-                organismDiffers: true,
-                GO: GO,
-                structures: [],
-                phyremodels: [],
-                commonGO: {},
-              }});
-          }
-          
-          else {
-              
-          if (!ids.includes(interactor)) {
-            offspring.push(interactor);            
-            ids.push(interactor);
-            // Ignore previously encountered binary interactions
-            ignore[interactor] = [id]; 
-          }
-          else {
-            ignore[interactor].push(id);
-          }
-        }
-      }
-    }
 })
 .catch(function() {
   // If error is encountered for initial query, submitted ID is likely invalid
   if (id == iquery) {
-    alert("Please enter a valid accession ID.");
-    return 0;
+    console.timeEnd("fetch");
+    throw new Error("Invalid accession ID.");
   }
 
   // If a new node being queried is invalid, remove all associated edges
   else {
-    for(var i=elements.length-1; i>=0; i--) {
-      if (elements[i].data.target == id) { 
+    flagged.push(id);
+    for (var i=elements.length-1; i>=0; i--) {
+      if (elements[i].data.target == id) {
         elements.splice(i, 1);
       }
     }
@@ -121,7 +142,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 500 interactors
-if (offspring.length < 50) {
+if (offspring.length < 200) {
   elements = elements.concat(edges);
   elements = elements.concat(nonhuman);
   fetchAll(offspring);
@@ -178,8 +199,6 @@ queryNode.style({"background-color": "red"});
   //}
 //}
 
-
-
 // Once network is rendered, display settings
 document.getElementById("dropdown").style.display = "block";
 document.getElementById("settings1").style.display = "block";
@@ -189,13 +208,16 @@ for (var x=0; x<GOcheckboxes.length; x++){
 }
 
 // Add classes for non-human nodes and nodes without 3D structures
-for (var i=1; i<cy.nodes().length; i++) {
+for (var i=0; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
     if (cy.nodes()[i].data("structures").length == 0) {
     cy.nodes()[i].addClass("noStruc");
   }
+    if (cy.nodes()[i].data("selfInteract")) {
+      cy.nodes()[i].style("border-width", "5");
+    }
 }
 
 // Work out shared GO terms between all nodes and query (root) node
@@ -250,7 +272,7 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName")+" (<i>"+this.data("id")+"</i>)";
+  var description = this.data("fullName")+" ("+this.data("id")+")";
   document.getElementById("name").innerHTML = description;
 });
 
@@ -274,6 +296,7 @@ cy.on("layoutstop", function(){
   expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
+  cy.panBy({x:-240, y:-35});
 });
 
 // Define right-click context menu
