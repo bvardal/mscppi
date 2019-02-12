@@ -15,43 +15,116 @@
        width: 100%;
        height: 100%;
        position: absolute;
-       top: 110px;
-       left: 0px;
+       top: 35px;
+       left: 240px;
     }
     #input, #name {
       text-align: center;
     }
     #name {
-      padding: 20px;
+      padding: 10px;
     }
-    #settings {
+    #dropdown {
       display: none;
       position: fixed;
-      top: 0;
+      top: 0px;
       left: 0;
       padding: 10px;
     }
+    #settings1 {
+      display: none;
+      position: fixed;
+      top: 50px;
+      left: 0;
+      padding: 10px;
+    }
+    #settings2 {
+      display: none;
+      position: fixed;
+      top: 50px;
+      left: 0;
+      padding: 10px;
+    }
+    #loading {
+     position: fixed;
+     top: 250px;
+     padding: 35px;
+    }
+    #legend {
+    display: none;
+     position: fixed;
+     top: 450px;
+    }
+ 
 </style>
 
 <body>
-    <div id="settings">
+    <div id="dropdown">
+    Select a filtering method:
+    </br>
+    <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
+    <option value = "settings1">Filtered proteins become more transparent but remain visible (Recommended)</option>
+    <option value = "settings2">Filtered proteins are removed along with proteins without a path to the query</option>
+    </select>
+    </div>
+    
+    <div id="settings1">
     <table border=1 align="left">
-    <tr><td colspan=2> Only highlight interactors with matching:</td></tr>
+    <tr><td colspan=2> <b>Only highlight interactors with:</b></td></tr>
+    <tr>
+    <td>Human origin</td>
+    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.nonHuman');"/></td>
+    </tr>
+    <tr>
+    <td>Resolved structure</td>
+    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.noStruc');"/></td>
+    </tr>
+    <tr><td colspan=2> Matching GO terms:</td></tr>
     <tr>
     <td>Cellular component</td>
-    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectC');"/></td>
+    <td><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectC');"/></td>
     </tr>
     <tr>
     <td>Biological process</td>
-    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectP');"/></td>
+    <td><input class="GOcheck" id="BPcheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectP');"/></td>
     </tr>
     <tr>
     <td>Molecular function</td>
-    <td><input type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectF');"/></td>
+    <td><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilter(this, '.rejectF');"/></td>
     </tr>
     </table>
     </div>
-
+    
+    
+    
+    <div id="settings2">
+    <table border=1 align="left">
+    <tr><td colspan=2> <b>Only highlight interactors with:</b></td></tr>
+    <tr>
+    <td>Human origin</td>
+    <td><input type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.nonHuman');"/></td>
+    </tr>
+    <tr>
+    <td>Resolved structure</td>
+    <td><input type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.noStruc');"/></td>
+    </tr>
+    <tr><td colspan=2> Matching GO terms:</td></tr>
+    <tr>
+    <td>Cellular component</td>
+    <td><input class="GOcheck" id="CCcheck2" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectC');"/></td>
+    </tr>
+    <tr>
+    <td>Biological process</td>
+    <td><input class="GOcheck" id="BPcheck2" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectP');"/></td>
+    </tr>
+    <tr>
+    <td>Molecular function</td>
+    <td><input class="GOcheck" id="MFcheck2" type="CHECKBOX" value="1" onchange="OptionfilterV2(this, '.rejectF');"/></td>
+    </tr>
+    </table>
+    </div>
+    
+   
     <div id = "input">
     <label for="query">Please enter protein accession ID:</label>
     <input type="text" id="query" value="P20340">
@@ -59,6 +132,15 @@
     </div>
 
     <div id="name"></div>
-    <div id="cy"></div>
+    <div id="cy"></div> 
+    <div id = "loading"></div>
+    
+    <!-- Not to be added yet, takes too much space. Just to give an idea of what could be written -->
+    <div id = "legend">Click on square nodes to reveal further interactions 
+    <br>
+    Click on circle nodes to hide further interactions, if possible
+    <br><br>
+    <b>Warning:</b> Non-human proteins will be removed from the network when using GO filters
+    </div>
 </body>
 </html>
