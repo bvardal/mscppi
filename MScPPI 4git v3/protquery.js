@@ -19,24 +19,18 @@ function fetchAll(query) {
 // Offspring and new edges need to be reset with each iteration
 var offspring = [];  // New nodes that will be queried in next iteration
 var edges = [];  // Edges that are saved in memory in case they need to be added
-
-Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id)
+var nonhuman = [];
+Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
 .then(res => res.json())
 .then(function(data) {
+    
   // Retrieve gene name, protein name, organism
   var name = data.entryName.replace("_HUMAN", "");
 
   var fullName = data.recommendedName;
 
-  // Retrieve GO terms and method of structure determination (if given)
-  var GO = {"F":[], "P":[], "C":[]};
-
-  for (var i=0; i<data.goTerms.length; i++) {
-          var term = data.goTerms[i].properties.term
-          GO[term.charAt(0)].push(term.slice(2));
-      }
-      
-      
+  var GO = {"F":[], "P":[], "C":[]};  
+  
   var structures = [];
   var phyremodels = [];
   
@@ -52,10 +46,9 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       phyremodels.push(phyremodel);
   }
   
-
   // Push node to elements with relevant information
   elements.push({data: {
-    id: data.uniprotAccession, 
+    id: id, 
     name: name,
     fullName: fullName,
     GO: GO,
@@ -63,41 +56,48 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     phyremodels: phyremodels,
     commonGO: {}
   }});
-
-  ids.push(data.uniprotAccession);
-
+  
+  ids.push(id);
   // Retrieve interactors
   for(var j=0; j<data.interactor.length; j++) {
         var interactors = data.interactor;
         var interactor = interactors[j].accession;
-        if(!ignore[data.uniprotAccession].includes(interactor)
-           && interactor !== undefined) {
-
+        if(!ignore[id].includes(interactor)
+           && interactor) {
+        
           // Push edge to array for later use
             edges.push({data: {
-            source: data.uniprotAccession, 
+            source: id, 
             target: interactor, 
             // experiments: interactors[j].experiments 
           }});
-          
-          if (interactors[j].organismDiffers == true){
-                elements.push({data: {
+        
+          if (interactors[j].organismDiffers){
+                name = interactors[j].entryName
+                if (!name) {name = interactors[j].label}
+                
+                nonhuman.push({data: {
                 id: interactors[j].accession, 
-                name: interactors[j].label,
+                name: name,
                 fullName: interactors[j].recommendedName,
+                organismDiffers: true,
+                GO: GO,
+                structures: [],
+                phyremodels: [],
+                commonGO: {},
               }});
           }
           
           else {
-          
+              
           if (!ids.includes(interactor)) {
-            offspring.push(interactor);   
+            offspring.push(interactor);            
             ids.push(interactor);
             // Ignore previously encountered binary interactions
-            ignore[interactor] = [data.uniprotAccession]; 
+            ignore[interactor] = [id]; 
           }
           else {
-            ignore[interactor].push(data.uniprotAccession);
+            ignore[interactor].push(id);
           }
         }
       }
@@ -121,14 +121,14 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 500 interactors
-if (offspring.length < 500) {
+if (offspring.length < 50) {
   elements = elements.concat(edges);
+  elements = elements.concat(nonhuman);
   fetchAll(offspring);
 }
 
 else {
 console.timeEnd("fetch");
-
 
 // Once recursion has ended, generate and layout network
 console.time("layout");
@@ -150,7 +150,7 @@ cy = cytoscape({
       "text-wrap": "wrap",
       label: "data(name)",
       "font-size": "13px",
-      "border-color": "gold",
+      "border-color": "orange",
       "border-width": 0
       }
     },
@@ -172,28 +172,56 @@ queryNode.style({"background-color": "red"});
 
 // Add coloured border to nodes with known structure
 // (Replace later with checkbox to highlight nodes with known structure)
-for (var i=0; i<cy.nodes().length; i++) {
-  if (cy.nodes()[i].data("structures").length != 0) {
-    cy.nodes()[i].style({"border-width": "5", "border-color" : "orange"});
-  }
-}
+//for (var i=0; i<cy.nodes().length; i++) {
+ // if (cy.nodes()[i].data("structures").length != 0) {
+   // cy.nodes()[i].style({"border-width": "5"});
+  //}
+//}
 
 
 
 // Once network is rendered, display settings
 document.getElementById("dropdown").style.display = "block";
-document.getElementById("settings").style.display = "block";
+document.getElementById("settings1").style.display = "block";
+GOcheckboxes = document.getElementsByClassName("GOcheck")
+for (var x=0; x<GOcheckboxes.length; x++){
+    GOcheckboxes[x].disabled = true;
+}
 
-
-
+// Add classes for non-human nodes and nodes without 3D structures
+for (var i=1; i<cy.nodes().length; i++) {
+    if (cy.nodes()[i].data("organismDiffers") == true) {
+    cy.nodes()[i].addClass("nonHuman");
+  }
+    if (cy.nodes()[i].data("structures").length == 0) {
+    cy.nodes()[i].addClass("noStruc");
+  }
+}
 
 // Work out shared GO terms between all nodes and query (root) node
 console.time("intersection");
-for (var i=0; i<3; i++) {  // Loop through categories
-  for (var j=1; j<cy.nodes().length; j++) {  // Loop through nodes excluding query
+
+document.getElementById("loading").innerHTML = "Loading GO terms..." 
+Promise.all(cy.nodes().map(node => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/"+node.data("id").substring(0, 6)+"/GO.json") // GO API has no page on isoform GO terms, therefore use canonical GOs. Uniprot is the same
+.then(response => response.json())
+.then(function (GOterms) { 
+    if (GOterms && GOterms.length != 0){
+    for (var i=0; i<GOterms.length; i++) {
+      var term = GOterms[i].properties.term
+      node.data("GO")[term.charAt(0)].push(term.slice(2));
+      }
+    }
+    else {
+        node.data({
+            GO: {"F":[], "P":[], "C":[]}
+        })
+    }
+})))
+.then(function(){
+    for (var i=0; i<3; i++) {  // Loop through categories
+    for (var j=1; j<cy.nodes().length; j++) {  // Loop through nodes excluding query
     var queryGO = queryNode.data("GO")[categories[i]];
     var targetGO = cy.nodes()[j].data("GO")[categories[i]];
-    
     var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
     
     if (intersect.length == 0) {
@@ -205,9 +233,13 @@ for (var i=0; i<3; i++) {  // Loop through categories
       cy.nodes()[j].data("commonGO")[categories[i]] = intersect.join(", ");
     }
   }
-}
+} 
 console.timeEnd("intersection");
-
+for (var x=0; x<GOcheckboxes.length; x++){
+    GOcheckboxes[x].disabled = false;
+}
+document.getElementById("loading").innerHTML = "" 
+})
 
 
 
@@ -218,7 +250,7 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName")+" (<i>"+this.data("organism")+"</i>)";
+  var description = this.data("fullName")+" (<i>"+this.data("id")+"</i>)";
   document.getElementById("name").innerHTML = description;
 });
 
@@ -243,9 +275,6 @@ cy.on("layoutstop", function(){
   console.timeEnd("autocollapse")
   cy.center(queryNode);
 });
-
-
-
 
 // Define right-click context menu
 var contextMenu = cy.contextMenus({
@@ -301,13 +330,18 @@ var contextMenu = cy.contextMenus({
       hasTrailingDivider: true
     }
   ]
-});}});}
+});
+
+
+}})
+}
+
 
 
 //Display filtering method based on drop-down menu choice
 
 function DisplaySettings(method){
-    document.getElementById("settings").style.display = "none";
+    document.getElementById("settings1").style.display = "none";
     document.getElementById("settings2").style.display = "none";
     document.getElementById(method).style.display = "block";
     
@@ -384,7 +418,7 @@ function OptionfilterV2(checkboxid, optionclass) {
 
 // Define node collapse and expansion functions
 
-function collapse(node, label){
+function collapse(node){
   var targets = node.outgoers().nodes();
   if (targets.length == 0) {return 0;}
 
