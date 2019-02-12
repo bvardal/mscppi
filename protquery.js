@@ -28,21 +28,21 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     id: id,
     name: data.entryName.replace("_HUMAN", ""),
     fullName: data.recommendedName,
+    organismDiffers: false
   }});
 
   // Retrieve interactors
   var interactors = data.interactor;
 
   for(var i=0; i<interactors.length; i++) {
-    if (interactors[i].accession== null) {
+    if (interactors[i].accession === null) {
       continue
     }
 
     var interactor = interactors[i].accession.replace(/-\d$/, "");
 
     if(!ignore[id].includes(interactor)
-       && !flagged.includes(interactor)
-       && !interactors[i].organismDiffers) {
+       && !flagged.includes(interactor)) {
 
       // Push edge to array for later use
       edges.push({data: {
@@ -51,10 +51,34 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       }});
 
       if (!ids.includes(interactor)) {
-        offspring.push(interactor);
         ids.push(interactor);
         // Ignore previously encountered binary interactions
-        ignore[interactor] = [id]; 
+        ignore[interactor] = [id];
+
+        if (interactors[i].organismDiffers) {
+          // Non-human protein won't have a database page
+          // Therefore a node is pushed with the available information
+
+          if (interactors[i].label === null) {
+            var label = interactor.toLowerCase();
+          }
+          else {
+            var label = interactors[i].label.toLowerCase()
+          }
+
+          edges.push({data: {
+            id: interactor,
+            name: label,
+            fullname: interactors[i].recommededName,
+            organismDiffers: true
+          }});
+        }
+
+        else {
+          // Prepare to query interactor itself in next iteration
+          offspring.push(interactor); 
+        }
+
       }
       else {
         ignore[interactor].push(id);
@@ -108,7 +132,7 @@ cy = cytoscape({
       style: {
       "background-color": "blue",
       "text-wrap": "wrap",
-      label: "data(id)",
+      label: "data(name)",
       "font-size": "13px",
       }
     },
@@ -277,6 +301,6 @@ function expand(node){
   node.style("shape", "ellipse");
   for(var i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
-    expand(targets[i]);
+    //expand(targets[i]);
   }
 }
