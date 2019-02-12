@@ -69,7 +69,8 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 
     var interactor = interactors[i].accession.replace(/-\d$/, "");
 
-    if(!ignore[id].includes(interactor)) {
+    if(!ignore[id].includes(interactor)
+       && !flagged.includes(interactor)) {
 
       // Push edge to array for later use
       edges.push({data: {
@@ -141,7 +142,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   }
 })))
 .then(function(){
-// End recursion if the next iteration needs to query >= 500 interactors
+// End recursion if the next iteration needs to query >= 200 interactors
 if (offspring.length < 200) {
   elements = elements.concat(edges);
   elements = elements.concat(nonhuman);
