@@ -13,6 +13,7 @@ function altName(target, alternative) {
   }
 }
 
+
 // On new ID submission, reset elements etc.
 function BuildNetwork() {
   elements = [], ids = [], flagged=[];
@@ -57,12 +58,14 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 
   // Retrieve interactors
   var interactors = data.interactor;
-  var selfInteract = false;
 
   for(var i=0; i<interactors.length; i++) {
     if (!interactors[i].accession) {
       if (interactors[i].intactId2 == data.intactId1) {
-        selfInteract = true;
+        elements.push({data: {
+          source: id,
+          target: id
+      }});
       }
       continue
     }
@@ -96,7 +99,6 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
             structures: [],
             phyremodels: [],
             commonGO: {},
-            selfInteract: selfInteract
           }});
         }
 
@@ -121,7 +123,6 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     structures: structures,
     phyremodels: phyremodels,
     commonGO: {},
-    selfInteract: selfInteract
   }});
 })
 .catch(function() {
@@ -184,14 +185,12 @@ cy = cytoscape({
 });
 console.timeEnd("layout");
 
-
-
 // Colour query node 
 queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
-
-
+// Style loop edges for self-interactions
+cy.edges(":loop").style("loop-direction", -90);
 
 // Once network is rendered, display settings
 document.getElementById("dropdown").style.display = "block";
@@ -201,24 +200,15 @@ for (var x=0; x<GOcheckboxes.length; x++){
     GOcheckboxes[x].disabled = true;
 }
 
-// Add classes for non-human nodes and nodes without 3D structures, plus self-interactor loop edges
-for (var i=0; i<cy.nodes().length; i++) {
+// Add classes for non-human nodes and nodes without 3D structures
+for (var i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
     if (cy.nodes()[i].data("structures").length == 0 && cy.nodes()[i].data("phyremodels").length == 0) {
     cy.nodes()[i].addClass("noStruc");
   }
-    if (cy.nodes()[i].data("selfInteract")) {
-      cy.add({data: {
-        source: cy.nodes()[i].data("id"), 
-        target: cy.nodes()[i].data("id"),
-      }});
-    }
 }
-
-// Configure self-interactor loop edges
-cy.edges(":loop").style("loop-direction", -90)
 
 // Work out shared GO terms between all nodes and query (root) node
 console.time("intersection");
@@ -354,11 +344,7 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
-
-}})
-}
-
-
+}})}
 
 //Display filtering method based on drop-down menu choice
 
@@ -479,31 +465,25 @@ function expand(node){
   }
 }
 
-
-
 controldic = {};
 
 function expandcontrol(node){
-    controldic[node.id()] = [];
-    tobeexpanded = cy.collection();
-    for (z=0; z<cy.nodes('.collapsed').length; z++){
-        if (cy.nodes('.collapsed')[z].connectedEdges(':simple:hidden').length == 0){
-            controldic[node.id()].push(cy.nodes('.collapsed')[z])
-            tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
-        }
+  controldic[node.id()] = [];
+  tobeexpanded = cy.collection();
+  for (i=0; i<cy.nodes('.collapsed').length; i++){
+    if (cy.nodes('.collapsed')[i].connectedEdges(':simple:hidden').length == 0){
+      controldic[node.id()].push(cy.nodes('.collapsed')[i])
+      tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[i]);
     }
-    expand(tobeexpanded)
+  }
+  expand(tobeexpanded)
 }
 
 function collapsecontrol(node){
-        if (controldic[node.id()]){
-        for (y=0; y<controldic[node.id()].length; y++){
-        collapse(controldic[node.id()][y])
-        }
-        controldic[node.id()] = [];
-      }
+  if (controldic[node.id()]){
+    for (i=0; i<controldic[node.id()].length; i++){
+      collapse(controldic[node.id()][i])
     }
-    
-// Reminder: To revert self-interactor loop related changes, first remove the edge addition in the for loop after the cytoscape definition
-// Then, find all ":simple" matches and replace with nothing, 
-// and all outgoers()/incomers() functions and replace their followings with nodes()
+        controldic[node.id()] = [];
+  }
+}
