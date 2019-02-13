@@ -192,13 +192,6 @@ queryNode.style({"background-color": "red"});
 
 
 
-// Add coloured border to nodes with known structure
-// (Replace later with checkbox to highlight nodes with known structure)
-//for (var i=0; i<cy.nodes().length; i++) {
- // if (cy.nodes()[i].data("structures").length != 0) {
-   // cy.nodes()[i].style({"border-width": "5"});
-  //}
-//}
 
 // Once network is rendered, display settings
 document.getElementById("dropdown").style.display = "block";
@@ -208,18 +201,24 @@ for (var x=0; x<GOcheckboxes.length; x++){
     GOcheckboxes[x].disabled = true;
 }
 
-// Add classes for non-human nodes and nodes without 3D structures
+// Add classes for non-human nodes and nodes without 3D structures, plus self-interactor loop edges
 for (var i=0; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
-    if (cy.nodes()[i].data("structures").length == 0) {
+    if (cy.nodes()[i].data("structures").length == 0 && cy.nodes()[i].data("phyremodels").length == 0) {
     cy.nodes()[i].addClass("noStruc");
   }
     if (cy.nodes()[i].data("selfInteract")) {
-      cy.nodes()[i].style("border-width", "5");
+      cy.add({data: {
+        source: cy.nodes()[i].data("id"), 
+        target: cy.nodes()[i].data("id"),
+      }});
     }
 }
+
+// Configure self-interactor loop edges
+cy.edges(":loop").style("loop-direction", -90)
 
 // Work out shared GO terms between all nodes and query (root) node
 console.time("intersection");
@@ -284,13 +283,13 @@ cy.on("mouseout", "node", function(){
 
 cy.on("layoutstop", function(){
   console.time("autocollapse")
-  var targets = queryNode.outgoers().nodes();
+  var targets = queryNode.outgoers().edges(":simple").targets();
   for(var i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
   tobeexpanded = cy.collection();
     for (z=0; z<cy.nodes('.collapsed').length; z++){
-        if (cy.nodes('.collapsed')[z].connectedEdges(':visible').length == cy.nodes('.collapsed')[z].connectedEdges().length){
+        if (cy.nodes('.collapsed')[z].connectedEdges(':simple:hidden').length == 0){
             tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
         }
     }
@@ -355,7 +354,6 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
-
 
 }})
 }
@@ -443,19 +441,19 @@ function OptionfilterV2(checkboxid, optionclass) {
 // Define node collapse and expansion functions
 
 function collapse(node){
-  var targets = node.outgoers().nodes();
+  var targets = node.outgoers().edges(":simple").targets(); // Grabs only non-loop edges and targets
   if (targets.length == 0) {return 0;}
 
   node.addClass("collapsed");
   node.style("shape", "rectangle")
 
   for(var i=0; i<targets.length; i++) {
-    if (targets[i].degree() ==1) {
+    if (targets[i].degree(false) ==1) {
       targets[i].style("display", "none");
     }
 
     else {
-      var incomers = targets[i].incomers().nodes();
+      var incomers = targets[i].incomers().edges(":simple").sources();
       // Check if every source node is collapsed
       var collapsable = incomers.every(incomer => incomer.hasClass("collapsed"));
 
@@ -470,7 +468,7 @@ function collapse(node){
 
 function expand(node){
   // Currently expands target node and all its successors recursively
-  var targets = node.outgoers().nodes();
+  var targets = node.outgoers().edges(":simple").targets();
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
   for(var i=0; i<targets.length; i++) {
@@ -489,7 +487,7 @@ function expandcontrol(node){
     controldic[node.id()] = [];
     tobeexpanded = cy.collection();
     for (z=0; z<cy.nodes('.collapsed').length; z++){
-        if (cy.nodes('.collapsed')[z].connectedEdges(':visible').length == cy.nodes('.collapsed')[z].connectedEdges().length){
+        if (cy.nodes('.collapsed')[z].connectedEdges(':simple:hidden').length == 0){
             controldic[node.id()].push(cy.nodes('.collapsed')[z])
             tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
         }
@@ -505,3 +503,7 @@ function collapsecontrol(node){
         controldic[node.id()] = [];
       }
     }
+    
+// Reminder: To revert self-interactor loop related changes, first remove the edge addition in the for loop after the cytoscape definition
+// Then, find all ":simple" matches and replace with nothing, 
+// and all outgoers()/incomers() functions and replace their followings with nodes()
