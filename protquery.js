@@ -430,7 +430,7 @@ var contextMenu = cy.contextMenus({
       onClickFunction: function (event) {
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
-            if (document.getElementById("loadingGO").innerHTML == "" ) {
+            if (document.getElementById("loadingGO").innerHTML == "Loading GO terms... COMPLETE" ) {
                 alert(["Shared cellular component:\n" + target.data("commonGO").C,
                        "Shared biological process:\n" + target.data("commonGO").P,
                        "Shared molecular function:\n" + target.data("commonGO").F]
@@ -449,7 +449,7 @@ var contextMenu = cy.contextMenus({
       onClickFunction: function (event) {
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
-            if (document.getElementById("loadingOMIM").innerHTML == "" ) {
+            if (document.getElementById("loadingOMIM").innerHTML == "Loading OMIM IDs... COMPLETE" ) {
                 alert("Shared OMIM disease involvement:\n" + target.data("commonOMIM"));
                 }
             else {alert("OMIM IDs still loading...")}    
