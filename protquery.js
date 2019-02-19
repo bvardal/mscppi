@@ -28,20 +28,18 @@ function BuildNetwork() {
 function fetchAll(query) {
 // Offspring and new edges need to be reset with each iteration
 var offspring = [];  // New nodes that will be queried in next iteration
-var edges = [];  // Edges that are saved in memory in case they need to be added
-var nonhuman = [];
-Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/" + id + ".json")
+var saved = [];  // Elements saved in memory in case they need to be added
+Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
 .then(res => res.json())
 .then(function(data) {
-    
+  ids.push(id);
+
   // Retrieve gene name, protein name, organism
   var name = data.entryName.replace("_HUMAN", "");
-
   var fullName = data.recommendedName;
 
   var GO = {"F":[], "P":[], "C":[]};  
-  var OMIM = [];
-  var commonOMIM;
+  
   var structures = [];
   var phyremodels = [];
   
@@ -57,16 +55,25 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       phyremodels.push(phyremodel);
   }
 
+  // Push node to elements with relevant information
+  elements.push({data: {
+    id: id, 
+    name: name,
+    fullName: fullName,
+    GO: GO,
+    OMIM: [],
+    structures: structures,
+    phyremodels: phyremodels,
+    commonGO: {},
+  }});
+
   // Retrieve interactors
   var interactors = data.interactor;
 
   for(var i=0; i<interactors.length; i++) {
     if (!interactors[i].accession) {
       if (interactors[i].intactId2 == data.intactId1) {
-        elements.push({data: {
-          source: id,
-          target: id
-      }});
+        elements.push({data: {source: id, target: id}});
       }
       continue
     }
@@ -76,59 +83,44 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)) {
 
-      // Push edge to array for later use
-      edges.push({data: {
-        source: id, 
-        target: interactor,
-      }});
+      // Generate edge
+      var edge = {data: {source: id, target: interactor}};
 
       if (!ids.includes(interactor)) {
-        ids.push(interactor);
-        // Ignore previously encountered binary interactions
-        ignore[interactor] = [id];
-
         if (interactors[i].organismDiffers) {
           // Non-human protein won't have a database page
-          // Therefore a node is pushed with the available information
+          // Therefore node and edge immediately pushed with available info
 
-          edges.push({data: {
+          elements.push({data: {
             id: interactor,
             name: altName(interactors[i].label, interactor).toLowerCase(),
             fullName: altName(interactors[i].recommededName, "(Non-human)"),
             organismDiffers: true,
             GO: GO,
-            OMIM: OMIM,
+            OMIM: [],
             structures: [],
             phyremodels: [],
             commonGO: {},
-            commonOMIM: []
           }});
-        }
+          elements.push(edge);
 
-        else {
-          // Prepare to query interactor itself in next iteration
-          offspring.push(interactor); 
-        }
+        } else {  // If organism is human
+          saved.push(edge); // Save edge to interactor (has no node yet)
 
-      }
-      else {
+          // Ignore previously encountered binary interactions
+          if(Object.keys(ignore).includes(interactor)) {
+            ignore[interactor].push(id);
+          } else {
+            offspring.push(interactor); // Prepare to query interactor
+            ignore[interactor] = [id];
+          }
+        }
+      } else { // If protein has already been queried and node exists
+        elements.push(edge); // interactor already has a node so add edge
         ignore[interactor].push(id);
       }
     }
   }
-
-  // Push node to elements with relevant information
-  elements.push({data: {
-    id: id, 
-    name: name,
-    fullName: fullName,
-    GO: GO,
-    OMIM: OMIM,
-    structures: structures,
-    phyremodels: phyremodels,
-    commonGO: {},
-    commonOMIM: []
-  }});
 })
 .catch(function() {
   // If error is encountered for initial query, submitted ID is likely invalid
@@ -150,8 +142,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 .then(function(){
 // End recursion if the next iteration needs to query >= 200 interactors
 if (offspring.length < 200) {
-  elements = elements.concat(edges);
-  elements = elements.concat(nonhuman);
+  elements = elements.concat(saved);
   fetchAll(offspring);
 }
 
