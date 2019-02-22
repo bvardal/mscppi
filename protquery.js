@@ -62,6 +62,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     fullName: fullName,
     GO: GO,
     OMIM: [],
+    Reactome: [],
     structures: structures,
     phyremodels: phyremodels,
     commonGO: {},
@@ -98,6 +99,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
             organismDiffers: true,
             GO: GO,
             OMIM: [],
+            Reactome: [],
             structures: [],
             phyremodels: [],
             commonGO: {},
@@ -195,6 +197,7 @@ cy.edges(":loop").style("loop-direction", -90);
 document.getElementById("dropdown").style.display = "block";
 document.getElementById("settings").style.display = "block";
 document.getElementById("extraOMIM").disabled = true;
+document.getElementById("Reactomecheck").disabled = true;
 document.getElementById("extracheckboxes").style.display = "none";
 OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
 for (var x=0; x<OMIMcheckboxes.length; x++){
@@ -211,90 +214,18 @@ for (var i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
-    if (cy.nodes()[i].data("structures").length == 0 && cy.nodes()[i].data("phyremodels").length == 0) {
-    cy.nodes()[i].addClass("noStruc");
+    if (cy.nodes()[i].data("structures").length != 0 || cy.nodes()[i].data("phyremodels").length != 0) {
+    cy.nodes()[i].style({"background-color": "green"})
   }
 }
 
 
-// Get OMIM IDs and work out shared IDs between all nodes and query (root) node
-console.time("OMIM")
-document.getElementById("loadingOMIM").innerHTML = "Loading OMIM IDs..." 
-Promise.all(cy.nodes().map(node => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/"+node.data("id").substring(0, 6)+"/MIM.json") // GO API has no page on isoform GO terms, therefore use canonical GOs. Uniprot is the same
-.then(response => response.json())
-.then(function (OMIMids) { 
-    if (OMIMids && OMIMids.length != 0){
-    for (var i=0; i<OMIMids.length; i++) {
-      
-      if (OMIMids[i].properties.type == "phenotype"){
-      var id = OMIMids[i].id
-      node.data("OMIM").push(id);
-      }
-     }
-    }
-    else {
-        node.data({
-            OMIM: []
-        })
-    }
-})))
-.then(function(){
-if (queryNode.data("OMIM").length != 0) {
-    for (var i=0; i<cy.nodes().length; i++){
-        var queryOMIM = queryNode.data("OMIM")
-        var targetOMIM = cy.nodes()[i].data("OMIM")
-        var intersect = targetOMIM.filter(value => -1 !== queryOMIM.indexOf(value))
-        if (intersect.length == 0){
-            cy.nodes()[i].addClass("rejectOMIM")
-            cy.nodes()[i].data("commonOMIM", "none")
-        }
-        
-        else {
-            cy.nodes()[i].data("commonOMIM", intersect)
-        
-    }
-}
-var div = document.getElementById('extracheckboxes')
-    for (var z=0; z<queryNode.data("commonOMIM").length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM ID 
-        var term = queryNode.data("commonOMIM")[z]
-        if (term != "none") {
-            div.innerHTML += `
-            <tr>
-            <td>Query ID: ` + term  + `</td>
-            <td><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
-            </tr>
-            `    
-            
-            for (var i=1; i<cy.nodes().length; i++){                                            
-                var targetOMIM = cy.nodes()[i].data("commonOMIM")                       // Loop within previous loop for adding individual OMIM term reject classes to each node
-                if (targetOMIM.indexOf(term) == -1) {
-                    cy.nodes()[i].addClass("reject" + term)
-                }
-            }
-        }
-    }
-   document.getElementById("loadingOMIM").innerHTML = "Loading OMIM IDs... COMPLETE" 
-}
-else {
-   document.getElementById("loadingOMIM").innerHTML = "No OMIM IDs found for query"
-}
-
-document.getElementById("extraOMIM").disabled = false;
-for (var x=0; x<OMIMcheckboxes.length; x++){
-    OMIMcheckboxes[x].disabled = false;
-}
-
-
-
-console.timeEnd("OMIM")
-})
-
-
+/*
  // OMIM permabans IPs that use bots to mine information from their htmls such as OMIM id values ( https://omim.org/robots.txt ), so need to request API key to access its information
  
  // Follow-up script that scrapes search engine results for the value of each node's shared OMIM id. Used bing because it allows bots to scrape its results, unlike google. Discarded because engines truncate full OMIM entry titles.
  
- /*       .then(function(){
+        .then(function(){
         for (var x=0; x<cy.nodes().length; x++){
             if (cy.nodes()[x].data("commonOMIM").length > 0 && cy.nodes()[x].data("commonOMIM").indexOf("none") == -1) {
                 console.log(cy.nodes()[x].data("commonOMIM"))
@@ -313,32 +244,92 @@ console.timeEnd("OMIM")
             }
         }
     })
- */
+*/
 
 
-// Get GO terms and work out shared GO terms between all nodes and query (root) node
-console.time("intersection");
 
-document.getElementById("loadingGO").innerHTML = "Loading GO terms..." 
-Promise.all(cy.nodes().map(node => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/"+node.data("id").substring(0, 6)+"/GO.json") // GO API has no page on isoform GO terms, therefore use canonical GOs. Uniprot is the same
-.then(response => response.json())
-.then(function (GOterms) { 
-    if (GOterms && GOterms.length != 0){
-    for (var i=0; i<GOterms.length; i++) {
-      var term = GOterms[i].properties.term
-      node.data("GO")[term.charAt(0)].push(term.slice(2));
-      }
+
+async function fetchAfter(datatype, sitejson) {
+
+var cancel;
+console.time(datatype)
+document.getElementById("loading" + datatype).innerHTML = "Loading "+ datatype + " IDs..." 
+var siteid = datatype
+if (datatype == "OMIM") {siteid = "MIM"}
+
+var controller = new AbortController();         // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
+var signal = controller.signal;
+
+await Promise.all(cy.nodes().map(node =>        
+     fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/" + node.data("id").substring(0, 6) +"/" + siteid + ".json", {signal})       // Fetch terms
+    .then(response => response.json())
+    .then(function (sitejson) { 
+    if (sitejson && sitejson.length != 0){
+        for (var i=0; i<sitejson.length; i++) {
+            
+            if (datatype == "OMIM") {
+               if (sitejson[i].properties.type == "phenotype"){
+               var id = sitejson[i].id
+               node.data(datatype).push(id);
+                }  
+            }
+             
+            if (datatype == "Reactome"){
+                var id = sitejson[i].properties["pathway name"]
+                node.data(datatype).push(id)
+            }
+             
+            if (datatype == "GO"){
+                var term = sitejson[i].properties.term
+                node.data(datatype)[term.charAt(0)].push(term.slice(2));
+            }
+        }
     }
     else {
         node.data({
-            GO: {"F":[], "P":[], "C":[]}
+            datatype: []
         })
     }
-})))
-.then(function(){
-if (Object.values(queryNode.data("GO")).length != 0) {
-    for (var i=0; i<3; i++) {  // Loop through categories
-        for (var j=1; j<cy.nodes().length; j++) {  // Loop through nodes excluding query
+    
+     if (node == queryNode){
+         var querytermlength = node.data(datatype).length
+         if (datatype == "GO") {
+              querytermlength = Object.values(queryNode.data("GO")).length 
+         }
+         if (querytermlength == 0) {
+                 cancel = 1                                                    
+                 controller.abort();                                  // Stop fetching from database if query has no terms, causes an error that is caught by catch, promise.all resolves soon after. 
+             }
+     }                                                                        
+   })
+))
+.catch(function(){})
+
+if (cancel == 1) {
+    document.getElementById("loading" + datatype).innerHTML = "No " + datatype + " IDs found for query"
+    console.timeEnd(datatype)
+    return;                                
+}
+ 
+if (datatype == "OMIM" || datatype == "Reactome"){                                          // Basic "IDs-in-a-bag" comparison used in OMIM and Reactome fetches
+    for (var i=0; i<cy.nodes().length; i++){
+        var querydata = queryNode.data(datatype)
+        var targetdata = cy.nodes()[i].data(datatype)
+        var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))
+        if (intersect.length == 0){
+            cy.nodes()[i].addClass("reject"+ datatype)
+            cy.nodes()[i].data("common"+ datatype, "none")
+        }
+        
+        else {
+            cy.nodes()[i].data("common"+ datatype, intersect)
+        }   
+    }
+}
+
+if (datatype == "GO"){                                                                                              // Alternative GO dictionary-specific "IDs-in-a-bag" comparison used in GO fetching
+    for (var i=0; i<3; i++) {       // Loop through categories
+        for (var j=1; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
         var queryGO = queryNode.data("GO")[categories[i]];
         var targetGO = cy.nodes()[j].data("GO")[categories[i]];
         var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
@@ -353,15 +344,46 @@ if (Object.values(queryNode.data("GO")).length != 0) {
         }
      }
    }     
-document.getElementById("loadingGO").innerHTML = "Loading GO terms... COMPLETE" 
-}
-else {document.getElementById("loadingGO").innerHTML = "No GO terms found for query"}
-console.timeEnd("intersection");
-for (var x=0; x<GOcheckboxes.length; x++){
-    GOcheckboxes[x].disabled = false;
 }
 
-})
+
+if (datatype == "OMIM"){                                                                                       // Extra OMIM functions
+    var div = document.getElementById('extracheckboxes')
+    for (var z=0; z<queryNode.data("commonOMIM").length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM ID 
+        var term = queryNode.data("commonOMIM")[z]
+        if (term != "none") {
+            div.innerHTML += `
+            <tr>
+            <td>Query ID: ` + term  + `</td>
+            <td><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
+            </tr>
+            `    
+            
+            for (var i=1; i<cy.nodes().length; i++){                                            
+                var targetOMIM = cy.nodes()[i].data("commonOMIM")                       // Loop within previous loop for adding individual OMIM term reject classes to each node
+                if (targetOMIM.indexOf(term) == -1) {
+                    cy.nodes()[i].addClass("reject" + term)
+                }
+            }
+        }
+    }
+}
+
+document.getElementById("loading" + datatype).innerHTML = "Loading " + datatype + " IDs... COMPLETE" 
+checkboxes = document.getElementsByClassName(datatype + "check") 
+for (var x=0; x<checkboxes.length; x++){
+    checkboxes[x].disabled = false;
+}
+console.timeEnd(datatype)
+}
+
+
+fetchAfter("OMIM", "IDs")
+fetchAfter("Reactome", "IDs")
+fetchAfter("GO", "Terms")
+
+
+
 
 
 
@@ -439,6 +461,22 @@ var contextMenu = cy.contextMenus({
              else {alert("GO terms still loading...")}
         }
         else {alert("No GO terms found for query")}
+    },
+      hasTrailingDivider: true
+    },
+    {
+      id: "Reactomeshared",
+      content: "Show Reactome pathways shared with query",
+      selector: "node",
+      onClickFunction: function (event) {
+        if (queryNode.data("Reactome").length != 0) {
+            var target = event.target || event.cyTarget;
+            if (document.getElementById("loadingReactome").innerHTML == "Loading Reactome IDs... COMPLETE" ) {
+                alert("Shared Reactome pathway\n" + target.data("commonReactome"))
+                }
+             else {alert("Reactome IDs still loading...")}
+        }
+        else {alert("No Reactome IDs found for query")}
     },
       hasTrailingDivider: true
     },
