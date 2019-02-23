@@ -71,7 +71,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   // Retrieve interactors
   var interactors = data.interactor;
 
-  for(var i=0; i<interactors.length; i++) {
+  for(let i=0; i<interactors.length; i++) {
     if (!interactors[i].accession) {
       if (interactors[i].intactId2 == data.intactId1) {
         elements.push({data: {source: id, target: id}});
@@ -79,7 +79,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       continue
     }
 
-    var interactor = interactors[i].accession.replace(/-\d$/, "");
+    var interactor = interactors[i].accession.replace(/-1$/, "");
 
     if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)) {
@@ -134,7 +134,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   // If a new node being queried is invalid, remove all associated edges
   else {
     flagged.push(id);
-    for (var i=elements.length-1; i>=0; i--) {
+    for (let i=elements.length-1; i>=0; i--) {
       if (elements[i].data.target == id) {
         elements.splice(i, 1);
       }
@@ -210,7 +210,7 @@ for (var x=0; x<GOcheckboxes.length; x++){
 
 
 // Add classes for non-human nodes and nodes without 3D structures
-for (var i=1; i<cy.nodes().length; i++) {
+for (let i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
@@ -229,7 +229,7 @@ for (var i=1; i<cy.nodes().length; i++) {
         for (var x=0; x<cy.nodes().length; x++){
             if (cy.nodes()[x].data("commonOMIM").length > 0 && cy.nodes()[x].data("commonOMIM").indexOf("none") == -1) {
                 console.log(cy.nodes()[x].data("commonOMIM"))
-                for (var i=0; i<cy.nodes()[x].data("commonOMIM").length; i++){
+                for (let i=0; i<cy.nodes()[x].data("commonOMIM").length; i++){
                 OMIMid = cy.nodes()[x].data("commonOMIM")[i]
                 fetch("https://cors-anywhere.herokuapp.com/https://www.bing.com/search?q=omim+" + OMIMid)
           .then(response => response.text())
@@ -265,7 +265,7 @@ await Promise.all(cy.nodes().map(node =>
     .then(response => response.json())
     .then(function (sitejson) { 
     if (sitejson && sitejson.length != 0){
-        for (var i=0; i<sitejson.length; i++) {
+        for (let i=0; i<sitejson.length; i++) {
             
             if (datatype == "OMIM") {
                if (sitejson[i].properties.type == "phenotype"){
@@ -312,7 +312,7 @@ if (cancel == 1) {
 }
  
 if (datatype == "OMIM" || datatype == "Reactome"){                                          // Basic "IDs-in-a-bag" comparison used in OMIM and Reactome fetches
-    for (var i=0; i<cy.nodes().length; i++){
+    for (let i=0; i<cy.nodes().length; i++){
         var querydata = queryNode.data(datatype)
         var targetdata = cy.nodes()[i].data(datatype)
         var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))
@@ -328,7 +328,7 @@ if (datatype == "OMIM" || datatype == "Reactome"){                              
 }
 
 if (datatype == "GO"){                                                                                              // Alternative GO dictionary-specific "IDs-in-a-bag" comparison used in GO fetching
-    for (var i=0; i<3; i++) {       // Loop through categories
+    for (let i=0; i<3; i++) {       // Loop through categories
         for (var j=1; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
         var queryGO = queryNode.data("GO")[categories[i]];
         var targetGO = cy.nodes()[j].data("GO")[categories[i]];
@@ -359,7 +359,7 @@ if (datatype == "OMIM"){                                                        
             </tr>
             `    
             
-            for (var i=1; i<cy.nodes().length; i++){                                            
+            for (let i=1; i<cy.nodes().length; i++){                                            
                 var targetOMIM = cy.nodes()[i].data("commonOMIM")                       // Loop within previous loop for adding individual OMIM term reject classes to each node
                 if (targetOMIM.indexOf(term) == -1) {
                     cy.nodes()[i].addClass("reject" + term)
@@ -394,19 +394,35 @@ cy.on("tap", "node", function(){
 });
 
 cy.on("mouseover", "node", function(){
-  var description = this.data("fullName")+" ("+this.data("id")+")";
-  document.getElementById("name").innerHTML = description;
+  if (this.tip === undefined) {
+    this.tip = tippy(this.popperRef(), {
+      content : () => {
+        var content = document.createElement("description");
+        content.innerHTML = this.data("fullName")+" ("+this.data("id")+")";
+        return content;
+      },
+      theme: "light",
+      placement: "bottom",
+      distance: 5,
+      duration: [100, 0],
+      animateFill: false,
+      interactive: "true",
+      sticky: true,
+      hideOnClick: "toggle",
+    });
+  }
+  this.tip.show();
 });
 
 
-cy.on("mouseout", "node", function(){
-  document.getElementById("name").innerHTML="";
+cy.on("mouseout cxttap", "node", function(){
+  this.tip.hide();
 });
 
 cy.on("layoutstop", function(){
   console.time("autocollapse")
   var targets = queryNode.outgoers().edges(":simple").targets();
-  for(var i=0; i<targets.length; i++) {
+  for(let i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
   tobeexpanded = cy.collection();
@@ -431,6 +447,7 @@ var contextMenu = cy.contextMenus({
       selector: "node",
       onClickFunction: function (event) {
       var target = event.target || event.cyTarget;
+
       if (!target.data("organismDiffers")) {
           // Add "-1" to end of link if isoform isn"t specified
           // This is because pages without a specified isoform lack some information
@@ -664,7 +681,7 @@ function collapse(node){
   node.addClass("collapsed");
   node.style("shape", "rectangle")
 
-  for(var i=0; i<targets.length; i++) {
+  for(let i=0; i<targets.length; i++) {
     if (targets[i].degree(false) ==1) {
       targets[i].style("display", "none");
     }
@@ -688,7 +705,7 @@ function expand(node){
   var targets = node.outgoers().edges(":simple").targets();
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
-  for(var i=0; i<targets.length; i++) {
+  for(let i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
     if (!targets[i].hasClass("collapsed")) {
       expand(targets[i]);
