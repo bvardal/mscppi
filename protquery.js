@@ -79,7 +79,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       continue
     }
 
-    var interactor = interactors[i].accession.replace(/-1$/, "");
+    var interactor = interactors[i].accession
 
     if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)) {
@@ -88,15 +88,29 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       var edge = {data: {source: id, target: interactor}};
 
       if (!ids.includes(interactor)) {
-        if (interactors[i].organismDiffers) {
-          // Non-human protein won't have a database page
+         if (interactors[i].organismDiffers || /-\d$/.test(interactor)) {
+          // Non-human protein or isoform won't have a database page
           // Therefore node and edge immediately pushed with available info
+            var isoformstatus = false;
+            var organismstatus = false;
+            
+            if (interactors[i].organismDiffers) {organismstatus = true; 
+            var mouseoverstatus = "(Non-human)";
+            var nameid = ""
+            }
+     
+            
+            if (/-\d$/.test(interactor)) {var mouseoverstatus = "(Isoform " + interactor.match(/-\d$/)[0].substring(1) + " of " + interactors[i].label + ")";
+            var nameid = interactor.match(/-\d$/)
+            isoformstatus = true;
+            }
 
           elements.push({data: {
             id: interactor,
-            name: altName(interactors[i].label, interactor).toLowerCase(),
-            fullName: altName(interactors[i].recommededName, "(Non-human)"),
-            organismDiffers: true,
+            name: altName(interactors[i].label+nameid, interactor).toLowerCase(),
+            fullName: altName(interactors[i].recommededName, mouseoverstatus),
+            organismDiffers: organismstatus,
+            isoform: isoformstatus,
             GO: GO,
             OMIM: [],
             Reactome: [],
@@ -260,8 +274,8 @@ if (datatype == "OMIM") {siteid = "MIM"}
 var controller = new AbortController();         // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
 var signal = controller.signal;
 
-await Promise.all(cy.nodes().map(node =>        
-     fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/" + node.data("id").substring(0, 6) +"/" + siteid + ".json", {signal})       // Fetch terms
+await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
+     fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/" + node.data("id") +"/" + siteid + ".json", {signal})       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
     if (sitejson && sitejson.length != 0){
