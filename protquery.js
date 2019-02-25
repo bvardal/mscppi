@@ -99,7 +99,6 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
             var nameid = ""
             }
      
-            
             if (/-\d$/.test(interactor)) {var mouseoverstatus = "(Isoform " + interactor.match(/-\d$/)[0].substring(1) + " of " + interactors[i].label + ")";
             var nameid = interactor.match(/-\d$/)
             isoformstatus = true;
@@ -262,14 +261,11 @@ for (let i=1; i<cy.nodes().length; i++) {
     })
 */
 
-
-
-
 async function fetchAfter(datatype, sitejson) {
 
 var cancel;
 console.time(datatype)
-document.getElementById("loading" + datatype).innerHTML = "Loading "+ datatype + " IDs..." 
+document.getElementById("loading" + datatype).innerHTML = "Loading " +datatype+" "+sitejson+"...";
 var siteid = datatype
 if (datatype == "OMIM") {siteid = "MIM"}
 
@@ -385,23 +381,17 @@ if (datatype == "OMIM"){                                                        
     }
 }
 
-document.getElementById("loading" + datatype).innerHTML = "Loading " + datatype + " IDs... COMPLETE" 
-checkboxes = document.getElementsByClassName(datatype + "check") 
+document.getElementById("loading" + datatype).innerHTML = "Loading "+datatype+" "+sitejson+"... COMPLETE";
+checkboxes = document.getElementsByClassName(datatype + "check")
 for (var x=0; x<checkboxes.length; x++){
     checkboxes[x].disabled = false;
 }
 console.timeEnd(datatype)
 }
 
-
 fetchAfter("OMIM", "IDs")
 fetchAfter("Reactome", "IDs")
-fetchAfter("GO", "Terms")
-
-
-
-
-
+fetchAfter("GO", "terms")
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
@@ -412,11 +402,7 @@ cy.on("tap", "node", function(){
 cy.on("mouseover", "node", function(){
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
-      content : () => {
-        var content = document.createElement("description");
-        content.innerHTML = this.data("fullName")+" ("+this.data("id")+")";
-        return content;
-      },
+      content: this.data("fullName")+" ("+this.data("id")+")",
       theme: "light",
       placement: "bottom",
       distance: 5,
@@ -500,13 +486,13 @@ var contextMenu = cy.contextMenus({
     },
     {
       id: "Reactomeshared",
-      content: "Show Reactome pathways shared with query",
+      content: "Show reactome pathways shared with query",
       selector: "node",
       onClickFunction: function (event) {
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading Reactome IDs... COMPLETE" ) {
-                alert("Shared Reactome pathway\n" + target.data("commonReactome"))
+                alert("Shared reactome pathways:\n" + target.data("commonReactome"))
                 }
              else {alert("Reactome IDs still loading...")}
         }
@@ -566,7 +552,7 @@ var contextMenu = cy.contextMenus({
       content: "Export network as PNG image",
       coreAsWell: true,
       onClickFunction: function () {
-        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000);
+        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
         var a = document.createElement('a');
         a.href = image;
         a.setAttribute("download",  "network.png");
