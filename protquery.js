@@ -184,9 +184,11 @@ cy = cytoscape({
       "background-color": "blue",
       "text-wrap": "wrap",
       label: "data(name)",
-      "font-size": "13px",
+      width: 40, height: 40,
+      "font-size": 18, "font-family": "Helvetica",
+      "min-zoomed-font-size": 10,
       "border-color": "orange",
-      "border-width": 0
+      "border-width": 0,
       }
     },
     {
@@ -423,6 +425,7 @@ cy.on("mouseover", "node", function(){
       interactive: "true",
       sticky: true,
       hideOnClick: "toggle",
+      size: "large"
     });
   }
   this.tip.show();
@@ -448,7 +451,7 @@ cy.on("layoutstop", function(){
   expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
-  cy.panBy({x:-240, y:-35});
+  cy.panBy({x:-280, y:-60});
 });
 
 
@@ -551,7 +554,7 @@ var contextMenu = cy.contextMenus({
         image = cy.jpg()
         var a = document.createElement('a');
         a.href = image
-        a.setAttribute("download",  "HELP! I'm trapped inside this jpg")
+        a.setAttribute("download",  "network.jpg")
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -563,10 +566,10 @@ var contextMenu = cy.contextMenus({
       content: "Export network as PNG image",
       coreAsWell: true,
       onClickFunction: function () {
-        image = cy.png()
+        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000);
         var a = document.createElement('a');
-        a.href = image
-        a.setAttribute("download",  "HELP! I'm trapped inside this png")
+        a.href = image;
+        a.setAttribute("download",  "network.png");
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
