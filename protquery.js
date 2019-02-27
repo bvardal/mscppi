@@ -41,8 +41,8 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   
   var structures = [];
   var phyremodels = [];
-  
-  // Maybe make the above into dictionaries with each key being the pdb code and the value being a list of the experimentalStructures information
+  var gwidd = {};
+  var ignoregwidd = [];
   
   for (var x=0; x<data.experimentalStructures.length; x++) {
       var structure = data.experimentalStructures[x].pdbCode;
@@ -53,6 +53,30 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
       var phyremodel = data.phyreModels[y].model_path;
       phyremodels.push(phyremodel);
   }
+  
+  for (var z=0; z<data.gwiddComplex.length; z++){
+	  var complexids = data.gwiddComplex[z].otherDetails.interactionIds
+	  var match = /(^.*?)_(.*)/g.exec(complexids)
+	  var correctid;
+	  if (match[1] != match[2]){
+		  
+		  if (match[1] != id) {
+		  correctid = match[1]
+		  }
+		  
+		  else {
+		  correctid = match[2]
+		  }
+	  }
+	  
+	  else {
+		  correctid = match[1]
+	  }
+	  if (!ignoregwidd.includes(correctid)) {
+		  gwidd[correctid] = data.gwiddComplex[z].otherDetails.model_path
+		  ignoregwidd.push(correctid)
+	  }
+  }
 
   // Push node to elements with relevant information
   elements.push({data: {
@@ -62,6 +86,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     GO: GO,
     OMIM: [],
     Reactome: [],
+	gwidd: gwidd,
     structures: structures,
     phyremodels: phyremodels,
     commonGO: {},
@@ -172,7 +197,7 @@ cy = cytoscape({
       label: "data(name)",
       width: 40, height: 40,
       "font-size": 18, "font-family": "Helvetica",
-      "min-zoomed-font-size": 10,
+      "min-zoomed-font-size": 8,
       "border-color": "orange",
       "border-width": 0,
       }
@@ -223,9 +248,28 @@ for (let i=1; i<cy.nodes().length; i++) {
   }
 }
 
+
+// Add Gwidd complex model paths to relevant edges
+for (let i=0; i<cy.nodes().length; i++) {
+	let node = cy.nodes()[i]
+	
+	if (node.data("gwidd")) {
+		for (let x=0; x<Object.keys(node.data("gwidd")).length; x++) {
+			var gwiddid = Object.keys(node.data("gwidd"))[x]
+			var complexedges = node.outgoers().edges('[target = "' + gwiddid + '"]')
+			complexedges.style({"line-color": "green", "width": 8 })
+			complexedges.data("gwiddcomplex", node.data("gwidd")[gwiddid])
+		}
+	}
+}
+
+
+
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
 
+
+// Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson) {
 
 var cancel;
@@ -482,24 +526,24 @@ var contextMenu = cy.contextMenus({
       hasTrailingDivider: true
     },
     {
-      id: "excel",
-      content: "Export network as Excel table",
-      coreAsWell: true,
-      onClickFunction: function () {
-        json = cy.json()
-        text = JSON.stringify(json)                                     // Need to add steps here to process file into csv format
-        var a = document.createElement('a');
-        a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));    
-        a.setAttribute("download",  "HELP! I'm trapped inside this json")
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      id: "gwidd",
+      content: "View complex 3D structure for this interaction",
+      selector: "edge",
+      onClickFunction: function (event) {
+        var target = event.target || event.cyTarget;
+		if (target.data("gwiddcomplex")) {
+			alert(target.data("gwiddcomplex"))
+		}
+		else {
+			alert("No 3D complex structure is available for this interaction")
+		}
       },
       hasTrailingDivider: true
     },
     {
       id: "jpg",
       content: "Export network as JPG image",
+	  selector: "*",
       coreAsWell: true,
       onClickFunction: function () {
         image = cy.jpg()
@@ -515,6 +559,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "png",
       content: "Export network as PNG image",
+	  selector: "*",
       coreAsWell: true,
       onClickFunction: function () {
         var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
@@ -552,6 +597,12 @@ function showextraOMIM(){
 var dropdownchoice;                         
 dropdownchoice = "method1"                  // Default setting
 function DisplaySettings(method){
+	var allcheckboxes = $("input:checkbox")
+	for (let x=0; x<allcheckboxes.length; x++) {
+		if (allcheckboxes[x].checked == true) {
+			allcheckboxes[x].click()
+		}
+	}
     dropdownchoice = method
 }
 
@@ -580,6 +631,9 @@ function Optionfilter(checkBoxID, optionClass) {
       "line-style": "dashed", 
       "width": "2"
     });
+	cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
+      "width": "6"
+    });
   }
              
   else {
@@ -589,6 +643,9 @@ function Optionfilter(checkBoxID, optionClass) {
       "line-style": "solid", 
       "width": "4"
     });
+	cy.edges('[gwiddcomplex]').style({
+      "width": "8"
+    });
 
     if (checkEvents.length != 0){
       for (var i =0; i < checkEvents.length; i++) {
@@ -597,10 +654,14 @@ function Optionfilter(checkBoxID, optionClass) {
           "line-style": "dashed", 
           "width": "2"
         });
+		cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
+		  "width": "6"
+		});
       }
     }
   }
 }  
+
 
 function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
   if (checkBoxID.checked || multiFilter){
