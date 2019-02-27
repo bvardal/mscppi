@@ -17,7 +17,7 @@ function altName(target, alternative) {
 function BuildNetwork() {
   elements = [], ids = [], flagged=[];
   ignore = {};
-  iquery = document.getElementById("query").value.replace("-1", "");
+  iquery = document.getElementById("query").value.replace(/-1$/, "");
   ignore[iquery] = [];
   console.time("fetch");
   fetchAll([iquery]);  // Begin to fetch interaction data
@@ -72,13 +72,13 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 
   for(let i=0; i<interactors.length; i++) {
     if (!interactors[i].accession) {
-      if (interactors[i].intactId2 == data.intactId1) {
+      if (interactors[i].intactId1 == interactors[i].intactId2) {
         elements.push({data: {source: id, target: id}});
       }
       continue
     }
 
-    var interactor = interactors[i].accession.replace(/-1$/, "");
+    var interactor = interactors[i].accession.replace(/-\d+$/, "");
 
     if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)) {
@@ -181,7 +181,9 @@ cy = cytoscape({
       selector: "edge",
       style: {"width": 4}
     }
-  ]      
+  ],
+  minZoom: 0.2,
+  maxZoom: 5  
 });
 console.timeEnd("layout");
 
@@ -221,32 +223,8 @@ for (let i=1; i<cy.nodes().length; i++) {
   }
 }
 
-
-/*
- // OMIM permabans IPs that use bots to mine information from their htmls such as OMIM id values ( https://omim.org/robots.txt ), so need to request API key to access its information
- 
- // Follow-up script that scrapes search engine results for the value of each node's shared OMIM id. Used bing because it allows bots to scrape its results, unlike google. Discarded because engines truncate full OMIM entry titles.
- 
-        .then(function(){
-        for (var x=0; x<cy.nodes().length; x++){
-            if (cy.nodes()[x].data("commonOMIM").length > 0 && cy.nodes()[x].data("commonOMIM").indexOf("none") == -1) {
-                console.log(cy.nodes()[x].data("commonOMIM"))
-                for (let i=0; i<cy.nodes()[x].data("commonOMIM").length; i++){
-                OMIMid = cy.nodes()[x].data("commonOMIM")[i]
-                fetch("https://cors-anywhere.herokuapp.com/https://www.bing.com/search?q=omim+" + OMIMid)
-          .then(response => response.text())
-          .then(text => {
-            const parser = new DOMParser();
-            const htmlDocument = parser.parseFromString(text, "text/html");
-            const result1 = htmlDocument.documentElement.querySelector("h2 a").innerText;
-            cy.nodes()[x].data("commonOMIM")[i] = result1
-          })
-                   
-                }
-            }
-        }
-    })
-*/
+// Add collection for nodes removed via OptionfilterV2
+cy.scratch("removed", cy.collection());
 
 async function fetchAfter(datatype, sitejson) {
 
@@ -256,7 +234,7 @@ document.getElementById("loading" + datatype).innerHTML = "Loading " +datatype+"
 var siteid = datatype
 if (datatype == "OMIM") {siteid = "MIM"}
 
-var controller = new AbortController();         // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
+var controller = new AbortController(); // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
 var signal = controller.signal;
 
 await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
@@ -581,12 +559,12 @@ function DisplaySettings(method){
 
 // Tell html which filtering function to use based on dropdown choice
 
-function Optionfilterchoice(checkBoxID, optionclass){
+function Optionfilterchoice(checkBoxID, optionClass){
     if (dropdownchoice == "method1") {
-        Optionfilter(checkBoxID, optionclass)
+        Optionfilter(checkBoxID, optionClass)
     }
     else  if (dropdownchoice == "method2") {
-        OptionfilterV2(checkBoxID, optionclass)
+        OptionfilterV2(checkBoxID, optionClass)
     }
 }
 
@@ -623,41 +601,27 @@ function Optionfilter(checkBoxID, optionClass) {
     }
   }
 }  
-     
 
-function OptionfilterV2(checkBoxID, optionclass) {
- if (checkBoxID.checked){
-     
-     checkEvents2.push(optionclass)
-     cy.$(optionclass).style("opacity", 0);
-     cy.$(optionclass).connectedEdges().style("opacity", 0);
-     var sparenodes = cy.collection();
-     for (y=0; y < cy.nodes(optionclass).successors().nodes().length; y++){
-            if (cy.nodes(optionclass).successors().nodes()[y].connectedEdges(':transparent').connectedNodes(queryNode).length == 
-                cy.nodes(optionclass).successors().nodes()[y].connectedEdges().connectedNodes(queryNode).length) {
-                sparenodes = sparenodes.union(cy.nodes(optionclass).successors().nodes()[y])}}
-                sparenodes.style("opacity", 0);
-                sparenodes.connectedEdges().style("opacity", 0)}
- else {
-    
-    checkEvents2.splice(checkEvents2.indexOf(optionclass), 1);
-    cy.nodes().style("opacity", 1);
-    cy.nodes().connectedEdges().style("opacity", 1);
-    if (checkEvents2.length != 0){
-        
-        for (z=0; z < checkEvents2.length; z++) {
-            
-            cy.$(checkEvents2[z]).style("opacity", 0);
-            cy.$(checkEvents2[z]).connectedEdges().style("opacity", 0);
-             var sparenodes = cy.collection();
-             for (y=0; y < cy.nodes(checkEvents2[z]).successors().nodes().length; y++){
-                if (cy.nodes(checkEvents2[z]).successors().nodes()[y].connectedEdges(':transparent').connectedNodes(queryNode).length == 
-                    cy.nodes(checkEvents2[z]).successors().nodes()[y].connectedEdges().connectedNodes(queryNode).length) {
-                sparenodes = sparenodes.union(cy.nodes(checkEvents2[z]).successors().nodes(':transparent')[y])}}
-                sparenodes.style("opacity", 0);
-                sparenodes.connectedEdges().style("opacity", 0)}
+function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
+  if (checkBoxID.checked || multiFilter){
+    if(checkBoxID.checked) {
+    checkEvents2.push(optionClass);
     }
-}
+    var o = cy.$(optionClass);
+    var filtered = o.merge(o.successors()).merge(o.incomers().edges());
+    cy.scratch("removed").merge(filtered);
+    filtered.remove();
+  }
+  else {
+    checkEvents2.splice(checkEvents2.indexOf(optionClass), 1);
+    cy.scratch("removed").restore();
+
+    if (checkEvents2.length != 0) {
+      for(let i=0; i<checkEvents2.length; i++) {
+        OptionfilterV2({}, checkEvents2[i], true)
+      }
+    }
+  }
 }
 
   
