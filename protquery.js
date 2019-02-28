@@ -40,42 +40,36 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   var GO = {"F":[], "P":[], "C":[]};  
   
   var structures = [];
-  var phyremodels = [];
+  var phyreModels = [];
+  var ignoreGwidd = [];
   var gwidd = {};
-  var ignoregwidd = [];
   
-  for (var x=0; x<data.experimentalStructures.length; x++) {
-      var structure = data.experimentalStructures[x].pdbCode;
+  // Populate structures, phyreModels, and gwidd
+  for (let i=0; i<data.experimentalStructures.length; i++) {
+      var structure = data.experimentalStructures[i].pdbCode;
       structures.push(structure);
     }
    
-  for (var y=0; y<data.phyreModels.length; y++){
-      var phyremodel = data.phyreModels[y].model_path;
-      phyremodels.push(phyremodel);
+  for (let i=0; i<data.phyreModels.length; i++){
+      var phyreModel = data.phyreModels[i].model_path;
+      phyreModels.push(phyreModel);
   }
   
-  for (var z=0; z<data.gwiddComplex.length; z++){
-	  var complexids = data.gwiddComplex[z].otherDetails.interactionIds
-	  var match = /(^.*?)_(.*)/g.exec(complexids)
-	  var correctid;
-	  if (match[1] != match[2]){
-		  
-		  if (match[1] != id) {
-		  correctid = match[1]
-		  }
-		  
-		  else {
-		  correctid = match[2]
-		  }
-	  }
-	  
-	  else {
-		  correctid = match[1]
-	  }
-	  if (!ignoregwidd.includes(correctid)) {
-		  gwidd[correctid] = data.gwiddComplex[z].otherDetails.model_path
-		  ignoregwidd.push(correctid)
-	  }
+  for (let i=0; i<data.gwiddComplex.length; i++){
+    var complexIds = data.gwiddComplex[i].otherDetails.interactionIds
+    var match = /(^.*?)_(.*)/g.exec(complexIds)
+    var correctId;
+    if (match[1] == match[2] || match[1] != id){
+      correctId = match[1];
+    }
+    else {
+      correctId = match[2];
+    }
+
+    if (!ignoreGwidd.includes(correctId)) {
+      gwidd[correctId] = data.gwiddComplex[i].otherDetails.model_path
+      ignoreGwidd.push(correctId)
+    }
   }
 
   // Push node to elements with relevant information
@@ -89,13 +83,13 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     Reactome: [],
     gwidd: gwidd,
     structures: structures,
-    phyremodels: phyremodels,
+    phyreModels: phyreModels,
   }});
 
   // Retrieve interactors
   var interactors = data.interactor;
 
-  for(let i=0; i<interactors.length; i++) {
+  for (let i=0; i<interactors.length; i++) {
     if (!interactors[i].accession) {
       if (interactors[i].intactId1 == interactors[i].intactId2) {
         elements.push({data: {source: id, target: id}});
@@ -125,7 +119,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
             OMIM: [],
             Reactome: [],
             structures: [],
-            phyremodels: [],
+            phyreModels: [],
             commonGO: {},
           }});
           elements.push(edge);
@@ -217,7 +211,6 @@ console.timeEnd("layout");
 queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
-
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
 
@@ -229,15 +222,15 @@ document.getElementById("Reactomecheck").disabled = true;
 document.getElementById("extracheckboxesOMIM").style.display = "none";
 document.getElementById("extracheckboxesReactome").style.display = "none";
 OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
-for (var x=0; x<OMIMcheckboxes.length; x++){
+for (let x=0; x<OMIMcheckboxes.length; x++){
     OMIMcheckboxes[x].disabled = true;
 }
 Reactomecheckboxes = document.getElementsByClassName("Reactomecheck")
-for (var x=0; x<Reactomecheckboxes.length; x++){
+for (let x=0; x<Reactomecheckboxes.length; x++){
     Reactomecheckboxes[x].disabled = true;
 }
 GOcheckboxes = document.getElementsByClassName("GOcheck")
-for (var x=0; x<GOcheckboxes.length; x++){
+for (let x=0; x<GOcheckboxes.length; x++){
     GOcheckboxes[x].disabled = true;
 }
 
@@ -247,7 +240,7 @@ for (let i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
     cy.nodes()[i].addClass("nonHuman");
   }
-    if (cy.nodes()[i].data("structures").length != 0 || cy.nodes()[i].data("phyremodels").length != 0) {
+    if (cy.nodes()[i].data("structures").length != 0 || cy.nodes()[i].data("phyreModels").length != 0) {
     cy.nodes()[i].style({"background-color": "green"})
   }
 }
@@ -354,7 +347,7 @@ if (datatype == "OMIM" || datatype == "Reactome"){                              
 
 if (datatype == "GO"){                                                                                              // Alternative GO dictionary-specific "IDs-in-a-bag" comparison used in GO fetching
     for (let i=0; i<3; i++) {       // Loop through categories
-        for (var j=0; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
+        for (let j=0; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
         var queryGO = queryNode.data("GO")[categories[i]];
         var targetGO = cy.nodes()[j].data("GO")[categories[i]];
         var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
@@ -374,7 +367,7 @@ if (datatype == "GO"){                                                          
 
 if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra OMIM & Reactome buttons
     var div = document.getElementById('extracheckboxes' + datatype)
-    for (var z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
+    for (let z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
         var term = queryNode.data("common" + datatype)[z]
 		var string = term
 		if (datatype == "OMIM") {
@@ -417,7 +410,7 @@ if (datatype == "OMIM") {
 
 document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
 checkboxes = document.getElementsByClassName(datatype + "check")
-for (var x=0; x<checkboxes.length; x++){
+for (let x=0; x<checkboxes.length; x++){
     checkboxes[x].disabled = false;
 }
 console.timeEnd(datatype)
@@ -474,7 +467,7 @@ cy.on("mouseout cxttap", "node", function(){
 cy.on("layoutstop", function(){
   console.time("autocollapse")
   var targets = queryNode.outgoers().edges(":simple").targets();
-  for(let i=0; i<targets.length; i++) {
+  for (let i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
   tobeexpanded = cy.collection();
@@ -694,7 +687,7 @@ function Optionfilter(checkBoxID, optionClass) {
     });
 
     if (checkEvents.length != 0){
-      for (var i =0; i < checkEvents.length; i++) {
+      for (let i =0; i < checkEvents.length; i++) {
         cy.$(checkEvents[i]).style("opacity", 0.15);
         cy.$(checkEvents[i]).connectedEdges().style({
           "line-style": "dashed", 
@@ -725,7 +718,7 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     cy.scratch("removed").restore();
 
     if (checkEvents2.length != 0) {
-      for(let i=0; i<checkEvents2.length; i++) {
+      for (let i=0; i<checkEvents2.length; i++) {
         OptionfilterV2({}, checkEvents2[i], true)
       }
     }
@@ -737,13 +730,14 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
 // Define node collapse and expansion functions
 
 function collapse(node){
-  var targets = node.outgoers().edges(":simple").targets(); // Grabs only non-loop edges and targets
+  // Only consider non-loop edges and targets
+  var targets = node.outgoers().edges(":simple").targets(); 
   if (targets.length == 0) {return 0;}
 
   node.addClass("collapsed");
   node.style("shape", "rectangle")
 
-  for(let i=0; i<targets.length; i++) {
+  for (let i=0; i<targets.length; i++) {
     if (targets[i].degree(false) ==1) {
       targets[i].style("display", "none");
     }
@@ -771,22 +765,23 @@ function expand(node, force=false, click=true){
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
 
-  for(let i=0; i<targets.length; i++) {
+  for (let i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
+
     if (!targets[i].hasClass("collapsed") || force) {
       expand(targets[i], force, false);
     }
   }
 }
 
-controldic = {};
+controlDict = {};
 
 function expandcontrol(node){
-  controldic[node.id()] = [];
+  controlDict[node.id()] = [];
   tobeexpanded = cy.collection();
-  for (i=0; i<cy.nodes('.collapsed').length; i++){
+  for (let i=0; i<cy.nodes('.collapsed').length; i++){
     if (cy.nodes('.collapsed')[i].connectedEdges(':simple:hidden').length == 0){
-      controldic[node.id()].push(cy.nodes('.collapsed')[i])
+      controlDict[node.id()].push(cy.nodes('.collapsed')[i])
       tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[i]);
     }
   }
@@ -794,10 +789,10 @@ function expandcontrol(node){
 }
 
 function collapsecontrol(node){
-  if (controldic[node.id()]){
-    for (i=0; i<controldic[node.id()].length; i++){
-      collapse(controldic[node.id()][i])
+  if (controlDict[node.id()]){
+    for (let i=0; i<controlDict[node.id()].length; i++){
+      collapse(controlDict[node.id()][i])
     }
-        controldic[node.id()] = [];
+        controlDict[node.id()] = [];
   }
 }
