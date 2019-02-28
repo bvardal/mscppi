@@ -25,35 +25,33 @@
       top: 60px;
       left: 280px;
     }
-    p {
-      font-size: 18px;
-      text-align: left;
+    img {
+      height: calc(24px + 0.5vw);
+      width: calc(24px + 0.5vw);
+      vertical-align: middle;
     }
     #input {
       text-align: center;
-      font-size: 18px;
+      font-size: calc(16px + 0.5vw);
     }
-    #dropdown {
+    input, select, option {
+      font-size: calc(8px + 0.5vw);
+    }
+    p {
+      text-align: left;
+      font-size: calc(18px + 0.5vw);
+    }
+    #dropdown, #settings {
       display: none;
       position: fixed;
-      top: 0px;
       left: 0;
       padding: 10px;
+      font-size: calc(14px + 0.5vw);
     }
-    #settings {
-      display: none;
-      position: fixed;
-      top: 50px;
-      left: 0;
-      padding: 10px;
-    }
-    #loading {
-      position: fixed;
-      top: 650px;
-      padding: 10px;
-    }
-
-
+    #dropdown {top:0px;}
+    #settings {top: 50px;}
+    .blank_row {height: calc(10px + 0.5vw);}
+    .loading {font-size: calc(12px+0.5vw);}
 </style>
 
 <body>
@@ -68,13 +66,13 @@
     
     <div id="settings">
     <table id="checkboxes" border=1 align="left">
-    <tr bgcolor="#94c4fc"><td colspan=2> <font size="4"> <b>Only highlight interactors with:</b> </font> </td></tr>
+    <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
     <tr>
     <td>Human origin</td>
     <td><input type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
     </tr>
-    <tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr>
+    <tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>GO terms shared with query:</td></tr>
     <tr>
     <td>Cellular component</td>
@@ -88,13 +86,13 @@
     <td>Molecular function</td>
     <td><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectF');"/></td>
     </tr>
-    <tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr>
+    <tr id="loadingGO" class="loading"></tr><tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Reactome pathways shared with query:</td></tr>
     <tr>
     <td>Any pathway</td>
     <td><input  class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
     </tr>
-    <tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr><tr></tr>
+    <tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>OMIM IDs shared with query:</td></tr>
     <tr>
     <td>Any shared ID</td>
@@ -104,36 +102,33 @@
     <td colspan=2>Individual query IDs &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM" onclick="showextraOMIM()">Show</button></td>
     </tr>
     <tfoot id="extracheckboxes"></tfoot>
+    <tr id="loadingOMIM" class="loading"></tr><tr class="blank_row"></tr>
     </table>
     </div>
     
-    <div id = "input">
-    <label for="query">Please enter protein accession ID:</label>
-    <input type="text" id="query" value="P02545">
+    <div id="input">
+    <label for="query" class="input_text" font-size="calc(14px + 0.5vw)">Please enter protein accession ID:</label>
+    <input type="text" id="query" value="P02545" size=6 class="input_text">
     <button onclick="BuildNetwork()">Submit</button>&nbsp;&nbsp;&nbsp;   
-    <u id="legend">Legend</u>
+    <u id="legend" class="input_text">Legend</u>
     </div>
     <script>
       tippy("#legend", {
         theme: "light",
         placement: "bottom",
         content: `
-          <p><img src="icons/cred.png" align="center"> Query protein</p>
-          <p><img src="icons/cgreen.png" align="center"> Protein with known structure/model</p>
-          <p><img src="icons/cblue.png" align="center"> Protein without known structure/model</p>
-          <p><img src="icons/sblue.png" align="center"> / <img src="icons/sgreen.png" align="center"> Expandable on click</p>`,
+          <p><img src="icons/cred.png"> Query protein</p>
+          <p><img src="icons/cgreen.png"> Protein with known structure/model</p>
+          <p><img src="icons/cblue.png"> Protein without known structure/model</p>
+          <p><img src="icons/sblue.png"> / <img src="icons/sgreen.png"> Expandable on click</p>`,
         allowHTML: true,
         animateFill: false,
-        sticky: true
+        sticky: true,
+        maxWidth: "100%"
       })
     </script>
 
     <div id="cy"></div> 
-    <div id="loading">
-    <div id = "loadingOMIM"></div>
-    <div id = "loadingGO"></div>
-    <div id = "loadingReactome"></div>
-    </div>
     </div>
 </body>
 </html>
