@@ -99,16 +99,20 @@
     <td>Any pathway</td>
     <td class="button_cell"><input class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
     </tr>
-    <tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
+	<tr>
+	<td colspan=2>Individual query pathways &nbsp; &nbsp; &nbsp; &nbsp;<button class="Reactomecheck" id="extraReactome" onclick="showextracheckboxes('Reactome')">Show</button></td>
+    </tr>
+	<tbody id="extracheckboxesReactome"></tbody>
+	<tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>OMIM IDs shared with query:</td></tr>
     <tr>
     <td>Any shared ID</td>
     <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectOMIM');"/></td>
     </tr>
     <tr>
-    <td colspan=2>Individual query IDs &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM" onclick="showextraOMIM()">Show</button></td>
+    <td colspan=2>Individual query diseases &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM" onclick="showextracheckboxes('OMIM')">Show</button></td>
     </tr>
-    <tfoot id="extracheckboxes"></tfoot>
+    <tbody id="extracheckboxesOMIM"></tbody>
     <tr id="loadingOMIM" class="loading"></tr>
     </table>
     </div>

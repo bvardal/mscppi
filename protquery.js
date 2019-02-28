@@ -226,10 +226,15 @@ cy.edges(":loop").style("loop-direction", -90);
 document.getElementById("settings").style.display = "block";
 document.getElementById("extraOMIM").disabled = true;
 document.getElementById("Reactomecheck").disabled = true;
-document.getElementById("extracheckboxes").style.display = "none";
+document.getElementById("extracheckboxesOMIM").style.display = "none";
+document.getElementById("extracheckboxesReactome").style.display = "none";
 OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
 for (var x=0; x<OMIMcheckboxes.length; x++){
     OMIMcheckboxes[x].disabled = true;
+}
+Reactomecheckboxes = document.getElementsByClassName("Reactomecheck")
+for (var x=0; x<Reactomecheckboxes.length; x++){
+    Reactomecheckboxes[x].disabled = true;
 }
 GOcheckboxes = document.getElementsByClassName("GOcheck")
 for (var x=0; x<GOcheckboxes.length; x++){
@@ -349,7 +354,7 @@ if (datatype == "OMIM" || datatype == "Reactome"){                              
 
 if (datatype == "GO"){                                                                                              // Alternative GO dictionary-specific "IDs-in-a-bag" comparison used in GO fetching
     for (let i=0; i<3; i++) {       // Loop through categories
-        for (var j=1; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
+        for (var j=0; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
         var queryGO = queryNode.data("GO")[categories[i]];
         var targetGO = cy.nodes()[j].data("GO")[categories[i]];
         var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
@@ -367,7 +372,34 @@ if (datatype == "GO"){                                                          
 }
 
 
-if (datatype == "OMIM"){														// Extra OMIM functions
+if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra OMIM & Reactome buttons
+    var div = document.getElementById('extracheckboxes' + datatype)
+    for (var z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
+        var term = queryNode.data("common" + datatype)[z]
+		var string = term
+		if (datatype == "OMIM") {
+			var name = OMIMdatabase[term]									// Fetch query OMIM ID names from portable database to use on the buttons
+			if (!OMIMdatabase[term]) {name = ""}
+			string = "(OMIM: " + term + ")  " + name 
+		}
+		
+		div.innerHTML += `
+		<tr>
+		<td>` + string + `</td>
+		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
+		</tr>
+		`    
+		
+		for (let i=1; i<cy.nodes().length; i++){                                            
+			var targetdata = cy.nodes()[i].data("common" + datatype)                       // Loop within previous loop for adding individual OMIM term reject classes to each node
+			if (targetdata.indexOf(term) == -1) {
+				cy.nodes()[i].addClass("reject" + term)
+			}
+		}
+    }
+}
+
+if (datatype == "OMIM") {
 	for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
 		let node = cy.nodes()[i]
 		if (!node.data("commonOMIM").includes("none")) {
@@ -381,26 +413,6 @@ if (datatype == "OMIM"){														// Extra OMIM functions
 			}
 		}
 	}
-	
-    var div = document.getElementById('extracheckboxes')
-    for (var z=0; z<queryNode.data("commonOMIM").length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM ID 
-        var term = queryNode.data("commonOMIM")[z]
-        if (term != "none") {
-            div.innerHTML += `
-            <tr>
-            <td>` + term  + `</td>
-            <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
-            </tr>
-            `    
-            
-            for (let i=1; i<cy.nodes().length; i++){                                            
-                var targetOMIM = cy.nodes()[i].data("commonOMIM")                       // Loop within previous loop for adding individual OMIM term reject classes to each node
-                if (targetOMIM.indexOf(term) == -1) {
-                    cy.nodes()[i].addClass("reject" + term)
-                }
-            }
-        }
-    }
 }
 
 document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
@@ -518,7 +530,7 @@ var contextMenu = cy.contextMenus({
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
-                alert("Shared reactome pathways:\n" + target.data("commonReactome"))
+                alert("Shared reactome pathways:\n" + target.data("commonReactome").join('\n'))
                 }
              else {alert("Reactome IDs still loading...")}
         }
@@ -534,7 +546,7 @@ var contextMenu = cy.contextMenus({
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingOMIM").innerHTML == "Loading... complete." ) {
-                alert("Shared OMIM disease involvement:\n" + target.data("commonOMIM"));
+                alert("Shared OMIM disease involvement:\n" + target.data("commonOMIM").join('\n'));
                 }
             else {alert("OMIM IDs still loading...")}    
         }
@@ -595,16 +607,16 @@ var contextMenu = cy.contextMenus({
 
 
 // Display individual OMIM ID filters
-function showextraOMIM(){
-    var state = document.getElementById("extraOMIM").innerHTML
-    var div = document.getElementById('extracheckboxes')
+function showextracheckboxes(datatype){
+    var state = document.getElementById("extra" + datatype).innerHTML
+    var div = document.getElementById('extracheckboxes' + datatype)
     if (state == "Show"){
-        document.getElementById("extracheckboxes").style.display = "table-footer-group";
-        document.getElementById("extraOMIM").innerHTML = "Hide"
+        document.getElementById("extracheckboxes" + datatype).style.display = "table-row-group";
+        document.getElementById("extra" + datatype).innerHTML = "Hide"
     }
     else if (state == "Hide") {
-        document.getElementById("extracheckboxes").style.display = "none";
-        document.getElementById("extraOMIM").innerHTML = "Show"
+        document.getElementById("extracheckboxes" + datatype).style.display = "none";
+        document.getElementById("extra" + datatype).innerHTML = "Show"
     }
 }
 
@@ -649,7 +661,8 @@ function Optionfilter(checkBoxID, optionClass) {
       "width": "2"
     });
 	cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
-      "width": "6"
+      "width": "6",
+	  "opacity": 0.5
     });
   }
              
@@ -661,7 +674,8 @@ function Optionfilter(checkBoxID, optionClass) {
       "width": "4"
     });
 	cy.edges('[gwiddcomplex]').style({
-      "width": "8"
+      "width": "8",
+	  "opacity": 1
     });
 
     if (checkEvents.length != 0){
@@ -672,7 +686,8 @@ function Optionfilter(checkBoxID, optionClass) {
           "width": "2"
         });
 		cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
-		  "width": "6"
+		  "width": "6",
+		  "opacity": 0.5
 		});
       }
     }
