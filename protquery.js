@@ -223,7 +223,6 @@ cy.edges(":loop").style("loop-direction", -90);
 
 
 // Once network is rendered, display settings
-document.getElementById("dropdown").style.display = "block";
 document.getElementById("settings").style.display = "block";
 document.getElementById("extraOMIM").disabled = true;
 document.getElementById("Reactomecheck").disabled = true;
@@ -274,7 +273,7 @@ async function fetchAfter(datatype, sitejson) {
 
 var cancel;
 console.time(datatype)
-document.getElementById("loading" + datatype).innerHTML = "Loading " +datatype+" "+sitejson+"...";
+document.getElementById("loading" + datatype).innerHTML = "Loading...";
 var siteid = datatype
 if (datatype == "OMIM") {siteid = "MIM"}
 
@@ -327,7 +326,7 @@ await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>          
 .catch(function(){})
 
 if (cancel == 1) {
-    document.getElementById("loading" + datatype).innerHTML = "No " + datatype + " IDs found for query"
+    document.getElementById("loading" + datatype).innerHTML = "No " + datatype + " "+ sitejson + " found for query."
     console.timeEnd(datatype)
     return;                                
 }
@@ -404,7 +403,7 @@ if (datatype == "OMIM"){														// Extra OMIM functions
     }
 }
 
-document.getElementById("loading" + datatype).innerHTML = "Loading "+datatype+" "+sitejson+"... COMPLETE";
+document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
 checkboxes = document.getElementsByClassName(datatype + "check")
 for (var x=0; x<checkboxes.length; x++){
     checkboxes[x].disabled = false;
@@ -460,7 +459,6 @@ cy.on("layoutstop", function(){
   expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
-  cy.panBy({x:-280, y:-60});
 });
 
 
@@ -495,7 +493,7 @@ var contextMenu = cy.contextMenus({
       onClickFunction: function (event) {
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
-            if (document.getElementById("loadingGO").innerHTML == "Loading GO terms... COMPLETE" ) {
+            if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
                 alert(["Shared cellular component:\n" + target.data("commonGO").C,
                        "Shared biological process:\n" + target.data("commonGO").P,
                        "Shared molecular function:\n" + target.data("commonGO").F]
@@ -514,7 +512,7 @@ var contextMenu = cy.contextMenus({
       onClickFunction: function (event) {
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
-            if (document.getElementById("loadingReactome").innerHTML == "Loading Reactome IDs... COMPLETE" ) {
+            if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
                 alert("Shared reactome pathways:\n" + target.data("commonReactome"))
                 }
              else {alert("Reactome IDs still loading...")}
@@ -530,7 +528,7 @@ var contextMenu = cy.contextMenus({
       onClickFunction: function (event) {
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
-            if (document.getElementById("loadingOMIM").innerHTML == "Loading OMIM IDs... COMPLETE" ) {
+            if (document.getElementById("loadingOMIM").innerHTML == "Loading... complete." ) {
                 alert("Shared OMIM disease involvement:\n" + target.data("commonOMIM"));
                 }
             else {alert("OMIM IDs still loading...")}    

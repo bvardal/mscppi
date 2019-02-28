@@ -14,58 +14,56 @@
     <link rel="stylesheet" href="https://unpkg.com/tippy.js/themes/light.css"/>
     <script src="protquery.js"></script>
 	<script type="text/javascript" src="OMIMdatabase.js"></script>
-</head>
 
 <style>
-    html {
-    }
-    #cy {
-      position: fixed;
-      height: calc(100%);
-      width: calc(100%);
-      top: 60px;
-      left: 280px;
-    }
-    img {
-      height: calc(24px + 0.5vw);
-      width: calc(24px + 0.5vw);
-      vertical-align: middle;
-    }
-    #input {
-      text-align: center;
-      font-size: calc(16px + 0.5vw);
-    }
-    input, select, option {
-      font-size: calc(8px + 0.5vw);
-    }
-    p {
-      text-align: left;
-      font-size: calc(18px + 0.5vw);
-    }
-    #dropdown, #settings {
-      display: none;
-      position: fixed;
-      left: 0;
-      padding: 10px;
-      font-size: calc(14px + 0.5vw);
-    }
-    #dropdown {top:0px;}
-    #settings {top: 50px;}
-    .blank_row {height: calc(10px + 0.5vw);}
-    .loading {font-size: calc(12px+0.5vw);}
+  #cy {
+    position: fixed;
+    top: 8%;
+    left: 25%;
+    height: calc(92%);
+    width: calc(75%);
+    
+  }
+  img {
+    height: calc(24px + 0.5vw);
+    width: calc(24px + 0.5vw);
+    vertical-align: middle;
+  }
+  #input {
+    position: fixed;
+    left: 45%;
+    font-size: calc(16px + 0.5vh);
+  }
+  p {
+    text-align: left;
+    font-size: calc(16px + 0.5vw);
+  }
+  #settings {
+    position: fixed;
+    display: none;
+    top: 0px;
+    float: left;
+    padding: 10px;
+    font-size: 1.25vw;
+  }
+  input, select, option {
+    font-size: calc(1vw);
+  }
+  .blank_row {height: calc(8px + 0.5vh + 0.5vw);}
+  .loading {font-size: calc(12px+0.5vw);}
 </style>
+</head>
 
 <body>
-    <div id="dropdown">
+    <div id="settings">
     Select a filtering method:
-    </br>
+    <br>
     <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
     <option value = "method1">Hide filtered nodes but keep orphans</option>
     <option value = "method2">Remove filtered nodes and orphans</option>
     </select>
-    </div>
-    
-    <div id="settings">
+    <br><br>
+
     <table id="checkboxes" border=1 align="left">
     <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
@@ -103,7 +101,7 @@
     <td colspan=2>Individual query IDs &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM" onclick="showextraOMIM()">Show</button></td>
     </tr>
     <tfoot id="extracheckboxes"></tfoot>
-    <tr id="loadingOMIM" class="loading"></tr><tr class="blank_row"></tr>
+    <tr id="loadingOMIM" class="loading"></tr>
     </table>
     </div>
     
@@ -128,8 +126,7 @@
         maxWidth: "100%"
       })
     </script>
-
-    <div id="cy"></div> 
     </div>
+    <div id="cy"></div> 
 </body>
 </html>
