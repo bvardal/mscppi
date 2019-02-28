@@ -368,14 +368,28 @@ if (datatype == "GO"){                                                          
 }
 
 
-if (datatype == "OMIM"){                                                                                       // Extra OMIM functions
+if (datatype == "OMIM"){														// Extra OMIM functions
+	for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
+		let node = cy.nodes()[i]
+		if (!node.data("commonOMIM").includes("none")) {
+			for (let x=0; x<node.data("commonOMIM").length; x++) {
+				if (OMIMdatabase[node.data("commonOMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
+					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  " + OMIMdatabase[node.data("commonOMIM")[x]]
+				}
+				else {
+					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "	 	// Leave nameless OMIM IDs in but without name
+				}
+			}
+		}
+	}
+	
     var div = document.getElementById('extracheckboxes')
     for (var z=0; z<queryNode.data("commonOMIM").length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM ID 
         var term = queryNode.data("commonOMIM")[z]
         if (term != "none") {
             div.innerHTML += `
             <tr>
-            <td>Query ID: ` + term  + `</td>
+            <td>` + term  + `</td>
             <td><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
             </tr>
             `    
