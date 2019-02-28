@@ -84,12 +84,12 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     name: name,
     fullName: fullName,
     GO: GO,
+    commonGO: {},
     OMIM: [],
     Reactome: [],
-	gwidd: gwidd,
+    gwidd: gwidd,
     structures: structures,
     phyremodels: phyremodels,
-    commonGO: {},
   }});
 
   // Retrieve interactors
@@ -429,9 +429,24 @@ fetchAfter("GO", "terms")
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
-  if (!this.hasClass("collapsed")) {collapse(this, query); collapsecontrol(this);}
-  else {expand(this, query); expandcontrol(this)}
+  if (this.hasClass("forceExpand")) {
+    this.removeClass("forceExpand");
+    return 0;
+  }
+  if (!this.hasClass("collapsed")) {
+    collapse(this); 
+    collapsecontrol(this);
+  }
+  else {
+    expand(this);
+    expandcontrol(this)
+  }
 });
+
+cy.on("taphold", "node", function(){
+  expand(this, true);
+});
+
 
 cy.on("mouseover", "node", function(){
   if (this.tip === undefined) {
@@ -747,15 +762,19 @@ function collapse(node){
   }
 }
 
-function expand(node){
+function expand(node, force=false, click=true){
   // Currently expands target node and all its successors recursively
   var targets = node.outgoers().edges(":simple").targets();
+  if (targets.length == 0) {return 0;}
+
+  if (force && click) {node.addClass("forceExpand");}
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
+
   for(let i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
-    if (!targets[i].hasClass("collapsed")) {
-      expand(targets[i]);
+    if (!targets[i].hasClass("collapsed") || force) {
+      expand(targets[i], force, false);
     }
   }
 }
