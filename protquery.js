@@ -389,7 +389,7 @@ if (datatype == "OMIM"){														// Extra OMIM functions
             div.innerHTML += `
             <tr>
             <td>` + term  + `</td>
-            <td><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
+            <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
             </tr>
             `    
             
@@ -459,8 +459,13 @@ cy.on("layoutstop", function(){
   expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
+  cy.panBy({x:$(window).width()*-0.1});
 });
 
+cy.on("resize", function() {
+  cy.center(queryNode);
+  cy.panBy({x:$(window).width()*-0.1});
+});
 
 // Define right-click context menu
 var contextMenu = cy.contextMenus({

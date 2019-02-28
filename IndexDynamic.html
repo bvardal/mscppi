@@ -20,8 +20,8 @@
     position: fixed;
     top: 8%;
     left: 25%;
-    height: calc(92%);
-    width: calc(75%);
+    height: 92%;
+    width: 75%;
     
   }
   img {
@@ -30,8 +30,7 @@
     vertical-align: middle;
   }
   #input {
-    position: fixed;
-    left: 45%;
+    text-align: center;
     font-size: calc(16px + 0.5vh);
   }
   p {
@@ -48,9 +47,18 @@
   }
   input, select, option {
     font-size: calc(1vw);
+    text-align: center;
   }
-  .blank_row {height: calc(8px + 0.5vh + 0.5vw);}
-  .loading {font-size: calc(12px+0.5vw);}
+  .button_cell {
+    text-align: center;
+  }
+  .blank_row {
+    height: calc(8px + 0.5vh + 0.5vw);
+  }
+  .loading {
+    font-size: calc(12px+0.5vw);
+  }
+
 </style>
 </head>
 
@@ -69,33 +77,33 @@
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
     <tr>
     <td>Human origin</td>
-    <td><input type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
+    <td class="button_cell"><input type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
     </tr>
     <tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>GO terms shared with query:</td></tr>
     <tr>
     <td>Cellular component</td>
-    <td><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectC');"/></td>
+    <td class="button_cell"><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectC');"/></td>
     </tr>
     <tr>
     <td>Biological process</td>
-    <td><input class="GOcheck" id="BPcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectP');"/></td>
+    <td class="button_cell"><input class="GOcheck" id="BPcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectP');"/></td>
     </tr>
     <tr>
     <td>Molecular function</td>
-    <td><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectF');"/></td>
+    <td class="button_cell"><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectF');"/></td>
     </tr>
     <tr id="loadingGO" class="loading"></tr><tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Reactome pathways shared with query:</td></tr>
     <tr>
     <td>Any pathway</td>
-    <td><input  class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
+    <td class="button_cell"><input class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
     </tr>
     <tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>OMIM IDs shared with query:</td></tr>
     <tr>
     <td>Any shared ID</td>
-    <td><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectOMIM');"/></td>
+    <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectOMIM');"/></td>
     </tr>
     <tr>
     <td colspan=2>Individual query IDs &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM" onclick="showextraOMIM()">Show</button></td>
