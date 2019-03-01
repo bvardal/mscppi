@@ -709,7 +709,7 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     filtered.remove();
     var collapsees = cy.nodes(".collapsed")
     for (let i=0; i<collapsees.length; i++) {
-      if (!collapsees[i].targets().some(target => target.style("display") == "none")) {
+      if (collapsees[i].outdegree(false)==0) {
         collapsees[i].style("shape", "ellipse");
         collapsees[i].removeClass("collapsed");
         cy.scratch("collapsed").push("#"+collapsees[i].data("id"));
