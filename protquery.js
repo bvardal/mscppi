@@ -264,7 +264,7 @@ for (let i=0; i<cy.nodes().length; i++) {
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
-
+cy.scratch("collapsed", []);
 
 // Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson) {
@@ -707,11 +707,25 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     var filtered = o.merge(o.successors()).merge(o.incomers().edges());
     cy.scratch("removed").merge(filtered);
     filtered.remove();
+    var collapsees = cy.nodes(".collapsed")
+    for (let i=0; i<collapsees.length; i++) {
+      if (!collapsees[i].targets().some(target => target.style("display") == "none")) {
+        collapsees[i].style("shape", "ellipse");
+        collapsees[i].removeClass("collapsed");
+        cy.scratch("collapsed").push("#"+collapsees[i].data("id"));
+      }
+    }
   }
   else {
     checkEvents2.splice(checkEvents2.indexOf(optionClass), 1);
     cy.scratch("removed").restore();
-
+    cy.scratch("removed", cy.collection());
+    for (let i=0; i<cy.scratch("collapsed").length; i++) {
+      var collapseId = cy.scratch("collapsed")[i];
+      cy.nodes(collapseId).addClass("collapsed");
+      cy.nodes(collapseId).style("shape", "rectangle");
+    }
+    cy.scratch("collapsed", []);
     if (checkEvents2.length != 0) {
       for (let i=0; i<checkEvents2.length; i++) {
         OptionfilterV2({}, checkEvents2[i], true)
