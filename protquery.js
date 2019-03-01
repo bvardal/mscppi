@@ -115,7 +115,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
             name: altName(interactors[i].label, interactor).toLowerCase(),
             fullName: altName(interactors[i].recommededName, "(Non-human)"),
             organismDiffers: true,
-            GO: GO,
+            GO: {"F":[], "P":[], "C":[]},
             OMIM: [],
             Reactome: [],
             structures: [],
@@ -303,11 +303,6 @@ await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>          
             }
         }
     }
-    else {
-        node.data({
-            datatype: []
-        })
-    }
     
      if (node == queryNode){
          var querytermlength = node.data(datatype).length
@@ -336,7 +331,7 @@ if (datatype == "OMIM" || datatype == "Reactome"){                              
         var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))
         if (intersect.length == 0){
             cy.nodes()[i].addClass("reject"+ datatype)
-            cy.nodes()[i].data("common"+ datatype, "none")
+            cy.nodes()[i].data("common"+ datatype, ["none"])
         }
         
         else {
@@ -379,14 +374,14 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 		div.innerHTML += `
 		<tr>
 		<td>` + string + `</td>
-		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject`+ term + `');"/></td>
+		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + z + `');"/></td>
 		</tr>
 		`    
 		
 		for (let i=1; i<cy.nodes().length; i++){                                            
 			var targetdata = cy.nodes()[i].data("common" + datatype)                       // Loop within previous loop for adding individual OMIM term reject classes to each node
 			if (targetdata.indexOf(term) == -1) {
-				cy.nodes()[i].addClass("reject" + term)
+				cy.nodes()[i].addClass("reject" + datatype + z)			// Replace removes whitespace from string so that the selector is valid
 			}
 		}
     }
