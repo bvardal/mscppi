@@ -436,25 +436,34 @@ cy.on("taphold", "node", function(){
 
 
 cy.on("mouseover", "node", function(){
+  let link = "http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+this.data("id");
+
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
-      content: this.data("fullName")+" ("+this.data("id")+")",
+      content: `
+        <a class="cross" onClick="closeTip(this);")>&#x274C;</a>
+        <a href =${link} target="_blank">${this.data("id")}</a><br>
+        ${this.data("fullName")}
+        
+      `,
       theme: "light",
       placement: "bottom",
       distance: 5,
       duration: [100, 0],
       animateFill: false,
+      allowHTML: true,
       interactive: "true",
       sticky: true,
       hideOnClick: "toggle",
-      size: "large"
+      size: "large",
+      maxWidth: "100%"
     });
   }
   this.tip.show();
 });
 
 
-cy.on("mouseout cxttap", "node", function(){
+cy.on("cxttap", "node", function(){
   this.tip.hide();
 });
 
@@ -582,7 +591,7 @@ var contextMenu = cy.contextMenus({
         a.href = image
         a.setAttribute("download",  "network.jpg")
         document.body.appendChild(a);
-        a.click();
+        a.clicfk();
         document.body.removeChild(a);
       },
       hasTrailingDivider: true
@@ -649,7 +658,6 @@ function Optionfilterchoice(checkBoxID, optionClass){
         OptionfilterV2(checkBoxID, optionClass)
     }
 }
-
 
 
 // Define filtering functions for each method
@@ -802,4 +810,10 @@ function collapsecontrol(node){
     }
         controlDict[node.id()] = [];
   }
+}
+
+
+function closeTip(tip) {
+  let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
+  tipInstance.hide();
 }

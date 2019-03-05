@@ -32,7 +32,7 @@
     text-align: center;
     font-size: calc(16px + 0.5vh);
   }
-  p {
+  #legend{
     text-align: left;
     font-size: calc(16px + 0.5vw);
   }
@@ -56,25 +56,33 @@
   .loading {
     font-size: calc(12px+0.5vw);
   }
+  .cross {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+  }
 </style>
 </head>
 
 <body>
     <div id="input">
-    <label for="query" class="input_text" font-size="calc(14px + 0.5vw)">Please enter protein accession ID:</label>
-    <input type="text" id="query" value="P02545" size=6 class="input_text">
+    <label for="query">Please enter protein accession ID:</label>
+    <input type="text" id="query" value="P02545" size=6>
     <button onclick="BuildNetwork()">Submit</button>&nbsp;&nbsp;&nbsp;   
-    <u id="legend" class="input_text">Legend</u>
+    <u id="info">Info</u>
     </div>
     <script>
-      tippy("#legend", {
+      tippy("#info", {
         theme: "light",
         placement: "bottom",
         content: `
+          <div id="legend">
           <p><img src="icons/cred.png"> Query protein</p>
           <p><img src="icons/cgreen.png"> Protein with known structure/model</p>
           <p><img src="icons/cblue.png"> Protein without known structure/model</p>
-          <p><img src="icons/sblue.png"> / <img src="icons/sgreen.png"> Expandable on click</p>`,
+          <p><img src="icons/sblue.png"> / <img src="icons/sgreen.png"> Expandable on click</p>
+          </div>
+        `,
         allowHTML: true,
         animateFill: false,
         sticky: true,
