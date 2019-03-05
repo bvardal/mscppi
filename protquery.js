@@ -33,6 +33,10 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 .then(function(data) {
   ids.push(id);
 
+  if (data.interactor.length == 0) {
+    throw new Error("No interactors found for query.");
+  }
+
   // Retrieve gene name, protein name, organism
   var name = data.entryName.replace("_HUMAN", "");
   var fullName = data.recommendedName;
@@ -142,11 +146,16 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     }
   }
 })
-.catch(function() {
+.catch(function(err) {
   // If error is encountered for initial query, submitted ID is likely invalid
   if (id == iquery) {
     console.timeEnd("fetch");
-    throw new Error("Invalid accession ID.");
+    if (err == "Error: No interactors found for query.") {
+      throw new Error("No interactors found for query.")
+    }
+    else {
+      throw new Error("Invalid accession ID.");
+    }
   }
 
 
@@ -478,7 +487,6 @@ cy.on("mouseover", "node", function(){
       allowHTML: true,
       interactive: "true",
       sticky: true,
-      hideOnClick: "toggle",
       size: "large",
       maxWidth: "100%"
     });
