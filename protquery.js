@@ -264,7 +264,6 @@ for (let i=0; i<cy.nodes().length; i++) {
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
-cy.scratch("collapsed", []);
 
 // Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson) {
@@ -707,25 +706,24 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     var filtered = o.merge(o.successors()).merge(o.incomers().edges());
     cy.scratch("removed").merge(filtered);
     filtered.remove();
-    var collapsees = cy.nodes(".collapsed")
+    var collapsees = cy.nodes(".collapsed");
     for (let i=0; i<collapsees.length; i++) {
-      if (collapsees[i].outdegree(false)==0) {
+      if (collapsees[i].outdegree(false) == 0) {
         collapsees[i].style("shape", "ellipse");
-        collapsees[i].removeClass("collapsed");
-        cy.scratch("collapsed").push("#"+collapsees[i].data("id"));
+        collapsees[i].addClass("uncollapsed");
       }
     }
   }
   else {
     checkEvents2.splice(checkEvents2.indexOf(optionClass), 1);
+    var removed = cy.scratch("removed");
     cy.scratch("removed").restore();
     cy.scratch("removed", cy.collection());
-    for (let i=0; i<cy.scratch("collapsed").length; i++) {
-      var collapseId = cy.scratch("collapsed")[i];
-      cy.nodes(collapseId).addClass("collapsed");
-      cy.nodes(collapseId).style("shape", "rectangle");
+    var uncollapsees = cy.nodes(".uncollapsed");
+    for (let i=0; i<uncollapsees.length; i++) {
+      collapse(uncollapsees[i]);
+      uncollapsees[i].removeClass("uncollapsed");
     }
-    cy.scratch("collapsed", []);
     if (checkEvents2.length != 0) {
       for (let i=0; i<checkEvents2.length; i++) {
         OptionfilterV2({}, checkEvents2[i], true)
@@ -734,25 +732,24 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
   }
 }
 
-  
 
 // Define node collapse and expansion functions
 
 function collapse(node){
   // Only consider non-loop edges and targets
-  var targets = node.outgoers().edges(":simple").targets(); 
-  if (targets.length == 0) {return 0;}
+  if (node.outdegree(false) == 0) {return 0;}
+  var targets = node.outgoers(":simple").targets(); 
 
   node.addClass("collapsed");
   node.style("shape", "rectangle")
 
   for (let i=0; i<targets.length; i++) {
-    if (targets[i].degree(false) ==1) {
+    if (targets[i].outdegree(false) == 0) {
       targets[i].style("display", "none");
     }
 
     else {
-      var incomers = targets[i].incomers().edges(":simple").sources();
+      var incomers = targets[i].incomers(":simple").sources();
       // Check if every source node is collapsed
       var collapsable = incomers.every(incomer => incomer.hasClass("collapsed"));
 
@@ -767,10 +764,11 @@ function collapse(node){
 
 function expand(node, force=false, click=true){
   // Currently expands target node and all its successors recursively
-  var targets = node.outgoers().edges(":simple").targets();
-  if (targets.length == 0) {return 0;}
-
+  if (node.outdegree(false) == 0) {return 0;}
   if (force && click) {node.addClass("forceExpand");}
+
+  var targets = node.outgoers().edges(":simple").targets();
+
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
 
