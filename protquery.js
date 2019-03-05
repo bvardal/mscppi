@@ -219,6 +219,8 @@ cy.edges(":loop").style("loop-direction", -90);
 document.getElementById("settings").style.display = "block";
 document.getElementById("extraOMIM").disabled = true;
 document.getElementById("Reactomecheck").disabled = true;
+document.getElementById("extracheckboxesOMIM").style.display = "none";
+document.getElementById("extracheckboxesReactome").style.display = "none";
 OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
 for (let x=0; x<OMIMcheckboxes.length; x++){
     OMIMcheckboxes[x].disabled = true;
@@ -262,7 +264,6 @@ for (let i=0; i<cy.nodes().length; i++) {
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
-cy.scratch("collapsed", []);
 
 // Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson) {
@@ -360,7 +361,6 @@ if (datatype == "GO"){                                                          
 
 if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra OMIM & Reactome buttons
     var div = document.getElementById('extracheckboxes' + datatype)
-    var tablehtml = '<table border=1>'
     for (let z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
         var term = queryNode.data("common" + datatype)[z]
 		var string = term
@@ -369,14 +369,14 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 			if (!OMIMdatabase[term]) {name = ""}
 			string = "(OMIM: " + term + ")  " + name 
 		}
-        
-		tablehtml += `
+		
+		div.innerHTML += `
 		<tr>
 		<td>` + string + `</td>
 		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + z + `');"/></td>
 		</tr>
 		`    
-        
+		
 		for (let i=1; i<cy.nodes().length; i++){                                            
 			var targetdata = cy.nodes()[i].data("common" + datatype)                       // Loop within previous loop for adding individual OMIM term reject classes to each node
 			if (targetdata.indexOf(term) == -1) {
@@ -384,8 +384,6 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 			}
 		}
     }
-    tablehtml += '</table>'
-    div.innerHTML += tablehtml
 }
 
 if (datatype == "OMIM") {
@@ -402,29 +400,6 @@ if (datatype == "OMIM") {
 			}
 		}
 	}
-}
-
-if (datatype == "OMIM" || datatype =="Reactome") {
-    const button = document.getElementById("extra" + datatype)
-    const template = document.getElementById("extracheckboxes" + datatype)
-    const container = document.createElement('div' + datatype)
-    container.appendChild(document.importNode(template.content, true))
-    
-    tippy(button, {
-          content: container.innerHTML,
-          trigger: "click",
-          theme: "light",
-          placement: "right-end",
-          distance: 10,
-          duration: [100, 0],
-          allowHTML: true,
-          interactive: "true",
-          sticky: true,
-          arrow: true,
-          size: "regular",
-          onHide() {document.getElementById("extra" + datatype).innerHTML = "Show"},
-          onShow() {document.getElementById("extra" + datatype).innerHTML = "Hide"}
-    })
 }
 
 document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
@@ -461,25 +436,34 @@ cy.on("taphold", "node", function(){
 
 
 cy.on("mouseover", "node", function(){
+  let link = "http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+this.data("id");
+
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
-      content: this.data("fullName")+" ("+this.data("id")+")",
+      content: `
+        <a class="cross" onClick="closeTip(this);")>&#x274C;</a>
+        <a href =${link} target="_blank">${this.data("id")}</a><br>
+        ${this.data("fullName")}
+        
+      `,
       theme: "light",
       placement: "bottom",
       distance: 5,
       duration: [100, 0],
       animateFill: false,
+      allowHTML: true,
       interactive: "true",
       sticky: true,
       hideOnClick: "toggle",
-      size: "large"
+      size: "large",
+      maxWidth: "100%"
     });
   }
   this.tip.show();
 });
 
 
-cy.on("mouseout cxttap", "node", function(){
+cy.on("cxttap", "node", function(){
   this.tip.hide();
 });
 
@@ -607,7 +591,7 @@ var contextMenu = cy.contextMenus({
         a.href = image
         a.setAttribute("download",  "network.jpg")
         document.body.appendChild(a);
-        a.click();
+        a.clicfk();
         document.body.removeChild(a);
       },
       hasTrailingDivider: true
@@ -630,10 +614,22 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
-
-
 }})}
 
+
+// Display individual OMIM ID filters
+function showextracheckboxes(datatype){
+    var state = document.getElementById("extra" + datatype).innerHTML
+    var div = document.getElementById('extracheckboxes' + datatype)
+    if (state == "Show"){
+        document.getElementById("extracheckboxes" + datatype).style.display = "table-row-group";
+        document.getElementById("extra" + datatype).innerHTML = "Hide"
+    }
+    else if (state == "Hide") {
+        document.getElementById("extracheckboxes" + datatype).style.display = "none";
+        document.getElementById("extra" + datatype).innerHTML = "Show"
+    }
+}
 
 
 // Display filtering method based on drop-down menu choice
@@ -662,7 +658,6 @@ function Optionfilterchoice(checkBoxID, optionClass){
         OptionfilterV2(checkBoxID, optionClass)
     }
 }
-
 
 
 // Define filtering functions for each method
@@ -719,25 +714,24 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     var filtered = o.merge(o.successors()).merge(o.incomers().edges());
     cy.scratch("removed").merge(filtered);
     filtered.remove();
-    var collapsees = cy.nodes(".collapsed")
+    var collapsees = cy.nodes(".collapsed");
     for (let i=0; i<collapsees.length; i++) {
-      if (collapsees[i].outdegree(false)==0) {
+      if (collapsees[i].outdegree(false) == 0) {
         collapsees[i].style("shape", "ellipse");
-        collapsees[i].removeClass("collapsed");
-        cy.scratch("collapsed").push("#"+collapsees[i].data("id"));
+        collapsees[i].addClass("uncollapsed");
       }
     }
   }
   else {
     checkEvents2.splice(checkEvents2.indexOf(optionClass), 1);
+    var removed = cy.scratch("removed");
     cy.scratch("removed").restore();
     cy.scratch("removed", cy.collection());
-    for (let i=0; i<cy.scratch("collapsed").length; i++) {
-      var collapseId = cy.scratch("collapsed")[i];
-      cy.nodes(collapseId).addClass("collapsed");
-      cy.nodes(collapseId).style("shape", "rectangle");
+    var uncollapsees = cy.nodes(".uncollapsed");
+    for (let i=0; i<uncollapsees.length; i++) {
+      collapse(uncollapsees[i]);
+      uncollapsees[i].removeClass("uncollapsed");
     }
-    cy.scratch("collapsed", []);
     if (checkEvents2.length != 0) {
       for (let i=0; i<checkEvents2.length; i++) {
         OptionfilterV2({}, checkEvents2[i], true)
@@ -746,25 +740,24 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
   }
 }
 
-  
 
 // Define node collapse and expansion functions
 
 function collapse(node){
   // Only consider non-loop edges and targets
-  var targets = node.outgoers().edges(":simple").targets(); 
-  if (targets.length == 0) {return 0;}
+  if (node.outdegree(false) == 0) {return 0;}
+  var targets = node.outgoers(":simple").targets(); 
 
   node.addClass("collapsed");
   node.style("shape", "rectangle")
 
   for (let i=0; i<targets.length; i++) {
-    if (targets[i].degree(false) ==1) {
+    if (targets[i].outdegree(false) == 0) {
       targets[i].style("display", "none");
     }
 
     else {
-      var incomers = targets[i].incomers().edges(":simple").sources();
+      var incomers = targets[i].incomers(":simple").sources();
       // Check if every source node is collapsed
       var collapsable = incomers.every(incomer => incomer.hasClass("collapsed"));
 
@@ -779,10 +772,11 @@ function collapse(node){
 
 function expand(node, force=false, click=true){
   // Currently expands target node and all its successors recursively
-  var targets = node.outgoers().edges(":simple").targets();
-  if (targets.length == 0) {return 0;}
-
+  if (node.outdegree(false) == 0) {return 0;}
   if (force && click) {node.addClass("forceExpand");}
+
+  var targets = node.outgoers().edges(":simple").targets();
+
   node.removeClass("collapsed");
   node.style("shape", "ellipse");
 
@@ -816,4 +810,10 @@ function collapsecontrol(node){
     }
         controlDict[node.id()] = [];
   }
+}
+
+
+function closeTip(tip) {
+  let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
+  tipInstance.hide();
 }
