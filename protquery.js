@@ -219,8 +219,6 @@ cy.edges(":loop").style("loop-direction", -90);
 document.getElementById("settings").style.display = "block";
 document.getElementById("extraOMIM").disabled = true;
 document.getElementById("Reactomecheck").disabled = true;
-document.getElementById("extracheckboxesOMIM").style.display = "none";
-document.getElementById("extracheckboxesReactome").style.display = "none";
 OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
 for (let x=0; x<OMIMcheckboxes.length; x++){
     OMIMcheckboxes[x].disabled = true;
@@ -361,6 +359,7 @@ if (datatype == "GO"){                                                          
 
 if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra OMIM & Reactome buttons
     var div = document.getElementById('extracheckboxes' + datatype)
+    var tablehtml = '<table border=1>'
     for (let z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
         var term = queryNode.data("common" + datatype)[z]
 		var string = term
@@ -370,7 +369,7 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 			string = "(OMIM: " + term + ")  " + name 
 		}
 		
-		div.innerHTML += `
+		tablehtml += `
 		<tr>
 		<td>` + string + `</td>
 		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + z + `');"/></td>
@@ -384,6 +383,8 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 			}
 		}
     }
+    tablehtml += '</table>'
+    div.innerHTML += tablehtml
 }
 
 if (datatype == "OMIM") {
@@ -400,6 +401,29 @@ if (datatype == "OMIM") {
 			}
 		}
 	}
+}
+
+if (datatype == "OMIM" || datatype =="Reactome") {
+    const button = document.getElementById("extra" + datatype)
+    const template = document.getElementById("extracheckboxes" + datatype)
+    const container = document.createElement('div' + datatype)
+    container.appendChild(document.importNode(template.content, true))
+
+    tippy(button, {
+          content: container.innerHTML,
+          trigger: "click",
+          theme: "light",
+          placement: "right-end",
+          distance: 10,
+          duration: [100, 0],
+          allowHTML: true,
+          interactive: "true",
+          sticky: true,
+          arrow: true,
+          size: "regular",
+          onHide() {document.getElementById("extra" + datatype).innerHTML = "Show"},
+          onShow() {document.getElementById("extra" + datatype).innerHTML = "Hide"}
+    })
 }
 
 document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
@@ -615,21 +639,6 @@ var contextMenu = cy.contextMenus({
   ]
 });
 }})}
-
-
-// Display individual OMIM ID filters
-function showextracheckboxes(datatype){
-    var state = document.getElementById("extra" + datatype).innerHTML
-    var div = document.getElementById('extracheckboxes' + datatype)
-    if (state == "Show"){
-        document.getElementById("extracheckboxes" + datatype).style.display = "table-row-group";
-        document.getElementById("extra" + datatype).innerHTML = "Hide"
-    }
-    else if (state == "Hide") {
-        document.getElementById("extracheckboxes" + datatype).style.display = "none";
-        document.getElementById("extra" + datatype).innerHTML = "Show"
-    }
-}
 
 
 // Display filtering method based on drop-down menu choice
