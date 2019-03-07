@@ -3,6 +3,7 @@ var cy, elements, ids, ignore, iquery, queryNode, flagged;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
+var isoforms = [];
 
 function altName(target, alternative) {
   if (!target) {
@@ -28,18 +29,40 @@ function fetchAll(query) {
 // Offspring and new edges need to be reset with each iteration
 var offspring = [];  // New nodes that will be queried in next iteration
 var saved = [];  // Elements saved in memory in case they need to be added
+
 Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
 .then(res => res.json())
 .then(function(data) {
-  ids.push(id);
+    
+  var isoformstatus = 0
 
+  for (var i=0; i<isoforms.length; i++) {           // Loop over encountered isoforms and grab one of them to be the new query
+      if (isoforms[i].includes(id)) {
+          var isoform = isoforms[i].split(":")
+          id = isoform[1]
+          var intactisoform = isoform[0]
+          var isoformnumber = /-(\d+$)/.exec(isoform[1])[1]
+          isoformstatus = 1
+          isoforms.splice(i, 1)
+          break
+      }
+  }
+
+  ids.push(id);
+  
   if (data.interactor.length == 0) {
     throw new Error("No interactors found for query.");
   }
 
   // Retrieve gene name, protein name, organism
   var name = data.entryName.replace("_HUMAN", "");
+  if (isoformstatus == 1) {
+      name = data.entryName.replace("_HUMAN", "-" + isoformnumber)
+  }
   var fullName = data.recommendedName;
+  if (isoformstatus == 1) {
+      fullName = "Isoform " + isoformnumber + " of "+ data.recommendedName
+  }
 
   var GO = {"F":[], "P":[], "C":[]};  
   
@@ -47,6 +70,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   var phyreModels = [];
   var ignoreGwidd = [];
   var gwidd = {};
+  
   
   // Populate structures, phyreModels, and gwidd
   for (let i=0; i<data.experimentalStructures.length; i++) {
@@ -76,6 +100,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
     }
   }
 
+
   // Push node to elements with relevant information
   elements.push({data: {
     id: id, 
@@ -93,58 +118,110 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
   // Retrieve interactors
   var interactors = data.interactor;
 
-  for (let i=0; i<interactors.length; i++) {
+  function interactionfetcher(isopush){
+            if(!ignore[id].includes(interactor)
+           && !flagged.includes(interactor)) {
+
+          // Generate edge
+          var edge = {data: {source: id, target: interactor}};
+
+          if (!ids.includes(interactor)) {
+            if (interactors[i].organismDiffers) {
+              // Non-human protein won't have a database page
+              // Therefore node and edge immediately pushed with available info
+
+              elements.push({data: {
+                id: interactor,
+                name: altName(interactors[i].label, interactor).toLowerCase(),
+                fullName: altName(interactors[i].recommededName, "(Non-human)"),
+                organismDiffers: true,
+                GO: {"F":[], "P":[], "C":[]},
+                OMIM: [],
+                Reactome: [],
+                structures: [],
+                phyreModels: [],
+                commonGO: {},
+              }});
+              elements.push(edge);
+
+            } else {  // If organism is human
+              saved.push(edge); // Save edge to interactor (has no node yet)
+
+              // Ignore previously encountered binary interactions
+              if(Object.keys(ignore).includes(interactor)) {
+                ignore[interactor].push(id);
+              } 
+              else {
+                if (isopush == 1) {
+                     isoforms.push(interactors[i].intactId2 + ':' + interactor)         // Tracks isoforms encountered, since they don't have a page
+                     offspring.push(interactor.replace(/-\d+$/, ""))                      // Prepare to query canonical page, but will only use intactid of the appropriate isoform if encountered
+                }
+                else {
+                    offspring.push(interactor); // Prepare to query interactor
+                }
+                ignore[interactor] = [id];
+              }
+            }
+          } else { // If protein has already been queried and node exists
+            elements.push(edge); // interactor already has a node so add edge
+            ignore[interactor].push(id);
+          }
+        }
+    }
+  
+
+  for (var i=0; i<interactors.length; i++) {
+    
+   
+    if (isoformstatus == 0) {       // Check if id being queried is canonical
+    
+    if (!/-\d+$/.test(intactdatabase[interactors[i].intactId1]) || /-1$/.test(intactdatabase[interactors[i].intactId1])) {         // Iterate over interactions of canonical protein query
+        
     if (!interactors[i].accession) {
       if (interactors[i].intactId1 == interactors[i].intactId2) {
         elements.push({data: {source: id, target: id}});
       }
       continue
     }
-
-    var interactor = interactors[i].accession.replace(/-\d+$/, "");
-
-    if(!ignore[id].includes(interactor)
-       && !flagged.includes(interactor)) {
-
-      // Generate edge
-      var edge = {data: {source: id, target: interactor}};
-
-      if (!ids.includes(interactor)) {
-        if (interactors[i].organismDiffers) {
-          // Non-human protein won't have a database page
-          // Therefore node and edge immediately pushed with available info
-
-          elements.push({data: {
-            id: interactor,
-            name: altName(interactors[i].label, interactor).toLowerCase(),
-            fullName: altName(interactors[i].recommededName, "(Non-human)"),
-            organismDiffers: true,
-            GO: {"F":[], "P":[], "C":[]},
-            OMIM: [],
-            Reactome: [],
-            structures: [],
-            phyreModels: [],
-            commonGO: {},
-          }});
-          elements.push(edge);
-
-        } else {  // If organism is human
-          saved.push(edge); // Save edge to interactor (has no node yet)
-
-          // Ignore previously encountered binary interactions
-          if(Object.keys(ignore).includes(interactor)) {
-            ignore[interactor].push(id);
-          } else {
-            offspring.push(interactor); // Prepare to query interactor
-            ignore[interactor] = [id];
-          }
-        }
-      } else { // If protein has already been queried and node exists
-        elements.push(edge); // interactor already has a node so add edge
-        ignore[interactor].push(id);
-      }
+    
+    var interactor = interactors[i].accession
+    
+    if (!/-\d+$/.test(interactor) || /-1$/.test(interactor)) {          // 
+        interactor = interactors[i].accession.replace(/-\d+$/, "");
+        interactionfetcher(isopush=0);  
+   }
+    
+    else {
+        interactionfetcher(isopush=1);     
     }
   }
+ }
+ 
+ else {         // Block activated only when id being queried is isoform
+    
+     if (interactors[i].intactId1 == intactisoform) {       // Iterate only over isoform-specific interactions
+         
+         if (!interactors[i].accession) {
+              if (interactors[i].intactId1 == interactors[i].intactId2) {
+                elements.push({data: {source: id, target: id}});
+              }
+              continue
+        }
+         
+        var interactor = interactors[i].accession
+        
+        if (!/-\d+$/.test(interactor) || /-1$/.test(interactor)) {
+        
+           interactor = interactors[i].accession.replace(/-\d+$/, "");
+           interactionfetcher(isopush=0);  
+       }
+        
+        else {
+            interactionfetcher(isopush=1);   
+        } 
+  } 
+ }
+} 
 })
 .catch(function(err) {
   // If error is encountered for initial query, submitted ID is likely invalid
@@ -171,7 +248,7 @@ Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/intera
 })))
 .then(function(){
 // End recursion if the next iteration needs to query >= 200 interactors
-if (offspring.length < 200) {
+if (offspring.length < 150) {
   elements = elements.concat(saved);
   fetchAll(offspring);
 }
@@ -284,7 +361,7 @@ if (datatype == "OMIM") {siteid = "MIM"}
 var controller = new AbortController(); // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
 var signal = controller.signal;
 
-await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
+await Promise.all(cy.nodes('[^organismDiffers]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
      fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/" + node.data("id") +"/" + siteid + ".json", {signal})       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
