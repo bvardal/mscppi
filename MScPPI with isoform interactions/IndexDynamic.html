@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head>
+    <meta charset="utf-8"/>
+    <title>Network visualisation</title>
+    <script src="https://unpkg.com/jquery/dist/jquery.js"></script>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-context-menus/cytoscape-context-menus.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/cytoscape-context-menus/cytoscape-context-menus.css"/>
+    <script src="https://unpkg.com/popper.js/dist/umd/popper.js"></script>
+    <script src="https://unpkg.com/cytoscape-popper/cytoscape-popper.js"></script>
+    <script src="https://unpkg.com/tippy.js/umd/index.all.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js/index.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js/themes/light.css"/>
+    <script src="protquery.js"></script>
+    <script src="OMIMdatabase.js"></script>
+    <script src="intactdatabase.js"></script>
+
+<style>
+  #cy {
+    position: fixed;
+    top: 8%;
+    left: 25%;
+    height: 92%;
+    width: 75%;
+  }
+  img {
+    height: calc(24px + 0.5vw);
+    width: calc(24px + 0.5vw);
+    vertical-align: middle;
+  }
+  #input {
+    text-align: center;
+    font-size: calc(16px + 0.5vh);
+  }
+  #legend{
+    text-align: left;
+    font-size: calc(16px + 0.5vw);
+  }
+  #settings {
+    position: absolute;
+    display: none;
+    top: 0px;
+    float: left;
+    padding: 10px;
+    font-size: 1.25vw;
+  }
+  input, select, option {
+    font-size: calc(1vw);
+  }
+  .button_cell {
+    text-align: center;
+  }
+  .blank_row {
+    height: calc(8px + 0.5vh + 0.5vw);
+  }
+  .loading {
+    font-size: calc(12px+0.5vw);
+  }
+  .cross {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+  }
+</style>
+</head>
+
+<body>
+    <div id="input">
+    <label for="query">Please enter protein accession ID:</label>
+    <input type="text" id="query" value="P02545" size=6>
+    <button onclick="BuildNetwork()">Submit</button>&nbsp;&nbsp;&nbsp;   
+    <u id="info">Info</u>
+    </div>
+    <script>
+      tippy("#info", {
+        theme: "light",
+        placement: "bottom",
+        content: `
+          <div id="legend">
+          <p><img src="icons/cred.png"> Query protein</p>
+          <p><img src="icons/cgreen.png"> Protein with known structure/model</p>
+          <p><img src="icons/cblue.png"> Protein without known structure/model</p>
+          <p><img src="icons/sblue.png"> / <img src="icons/sgreen.png"> Expandable on click</p>
+          </div>
+        `,
+        allowHTML: true,
+        animateFill: false,
+        sticky: true,
+        maxWidth: "100%"
+      })
+    </script>
+    </div>
+
+    <div id="cy"></div> 
+
+    <div id="settings">
+    Select a filtering method:<br>
+    <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
+    <option value = "method1">Hide filtered nodes but keep orphans</option>
+    <option value = "method2">Remove filtered nodes and orphans</option>
+    </select><br><br>
+
+    <table id="checkboxes" border=1 align="left">
+    <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
+    <tr>
+      <td>Human origin</td>
+      <td class="button_cell"><input type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
+    </tr>
+    <tr class="blank_row"></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2>GO terms shared with query:</td></tr>
+    <tr>
+      <td>Cellular component</td>
+      <td class="button_cell"><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectC');"/></td>
+    </tr>
+    <tr>
+      <td>Biological process</td>
+      <td class="button_cell"><input class="GOcheck" id="BPcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectP');"/></td>
+    </tr>
+    <tr>
+      <td>Molecular function</td>
+      <td class="button_cell"><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectF');"/></td>
+    </tr>
+    <tr id="loadingGO" class="loading"></tr><tr class="blank_row"></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2>Reactome pathways shared with query:</td></tr>
+    <tr>
+      <td>Any pathway</td>
+      <td class="button_cell"><input class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
+    </tr>
+    <tr>
+      <td colspan=2>Individual query pathways &nbsp;&nbsp;&nbsp;&nbsp;<button class="Reactomecheck" id="extraReactome">Show</button></td>
+    </tr>
+    <template id="extracheckboxesReactome"></template> 
+    <tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2>OMIM IDs shared with query:</td></tr>
+    <tr>
+      <td>Any shared ID</td>
+      <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectOMIM');"/></td>
+    </tr>
+    <tr>
+      <td colspan=2>Individual query diseases &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck" id="extraOMIM">Show</button></td>
+    </tr>
+    <template id="extracheckboxesOMIM"></template> 
+    <tr id="loadingOMIM" class="loading"></tr>
+    </table>
+    </div>
+</body>
+</html>
