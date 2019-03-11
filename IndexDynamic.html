@@ -24,9 +24,11 @@
     width: 75%;
   }
   img {
+    vertical-align: middle;
+  }
+  .node_img {
     height: calc(24px + 0.5vw);
     width: calc(24px + 0.5vw);
-    vertical-align: middle;
   }
   #input {
     text-align: center;
@@ -77,10 +79,11 @@
         placement: "bottom",
         content: `
           <div id="legend">
-          <p><img src="icons/cred.png"> Query protein</p>
-          <p><img src="icons/cgreen.png"> Protein with known structure/model</p>
-          <p><img src="icons/cblue.png"> Protein without known structure/model</p>
-          <p><img src="icons/sblue.png"> / <img src="icons/sgreen.png"> Expandable on click</p>
+          <p><img src="icons/cred.png" class="node_img"> Query protein</p>
+          <p><img src="icons/cgreen.png" class="node_img"> Protein with known structure/model</p>
+          <p><img src="icons/gedge.png" height = "16px" width="40px"> Edge with modelled structure</p>
+          <p><img src="icons/cblue.png" class="node_img"> Protein without known structure/model</p>
+          <p><img src="icons/sblue.png" class="node_img"> / <img src="icons/sgreen.png" class="node_img"> Expandable on click</p>
           </div>
         `,
         allowHTML: true,
