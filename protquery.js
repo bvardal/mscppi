@@ -41,12 +41,7 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
   // Retrieve gene name, protein name, organism
   var name = data.entryName.replace("_HUMAN", "");
   var fullName = data.recommendedName;
-
-  var GO = {"F":[], "P":[], "C":[]};  
-  
-  var structures = [];
-  var phyreModels = [];
-  var ignoreGwidd = [];
+  var structures = [], phyreModels = [], ignoreGwidd = [], targets = [];
   var gwidd = {};
   
   // Populate structures, phyreModels, and gwidd
@@ -82,23 +77,22 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
     id: id, 
     name: name,
     fullName: fullName,
-    GO: GO,
+    GO: {"F":[], "P":[], "C":[]},
     commonGO: {},
     OMIM: [],
     Reactome: [],
     gwidd: gwidd,
     structures: structures,
     phyreModels: phyreModels,
+    targets: targets
   }});
 
   // Retrieve interactors
   var interactors = data.interactor;
 
   for (let i=0; i<interactors.length; i++) {
-    if (!interactors[i].accession) {
-      if (interactors[i].intactId1 == interactors[i].intactId2) {
-        elements.push({data: {source: id, target: id}});
-      }
+    if (interactors[i].intactId1 == interactors[i].intactId2) {
+      elements.push({data: {source: id, target: id}});
       continue
     }
 
@@ -120,12 +114,9 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
             name: altName(interactors[i].label, interactor).toLowerCase(),
             fullName: altName(interactors[i].recommededName, "(Non-human)"),
             organismDiffers: true,
+            OMIM: [], Reactome: [], structures: [], phyreModels: [],
             GO: {"F":[], "P":[], "C":[]},
-            OMIM: [],
-            Reactome: [],
-            structures: [],
-            phyreModels: [],
-            commonGO: {},
+            commonGO: {}
           }});
           elements.push(edge);
 
@@ -287,7 +278,7 @@ var controller = new AbortController(); // Promise.all runs the fetches for all 
 var signal = controller.signal;
 
 await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
-     fetch(`${fetch_link}/dbref/${node.data("id")}/${siteid}.json`, {signal})       // Fetch terms
+     fetch(`${fetch_link}/dbref/${node.id()}/${siteid}.json`, {signal})       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
     if (sitejson && sitejson.length != 0){
@@ -457,12 +448,10 @@ cy.on("tap", "node", function(){
   }
   else {
     if (!this.hasClass("collapsed")) {
-      collapse(this); 
-      collapsecontrol(this);
+      collapse(this);
     }
     else {
       expand(this);
-      expandcontrol(this)
     }
   }
 });
@@ -478,13 +467,13 @@ cy.on("mouseover", "node", function(){
     this.addClass("tempExpand");
   }
 
-  let link = "http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+this.data("id");
+  let link = "http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+this.id();
 
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
       content: `
         <a class="cross" onClick="closeTip(this);")>&#x274C;</a>
-        <a href =${link} target="_blank">${this.data("id")}</a><br>
+        <a href =${link} target="_blank">${this.id()}</a><br>
         ${this.data("fullName")}
         
       `,
@@ -548,11 +537,11 @@ var contextMenu = cy.contextMenus({
       if (!target.data("organismDiffers")) {
           // Add "-1" to end of link if isoform isn"t specified
           // This is because pages without a specified isoform lack some information
-          if (target.data("id").length == 6){
-              var id = target.data("id") + "-1";
+          if (target.id().length == 6){
+              var id = target.id() + "-1";
           }
           else { 
-            var id = target.data("id")}
+            var id = target.id()}
             window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+id);
        }
        else {alert("This protein is non-human and thus not in the PhyreRisk database.")}
@@ -777,6 +766,7 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
 
 
 // Define node collapse and expansion functions
+controlDict = {};
 
 function collapse(node){
   // Only consider non-loop edges and targets
@@ -803,6 +793,13 @@ function collapse(node){
       }
     }
   }
+
+  if (controlDict[node.id()]){
+    for (let i=0; i<controlDict[node.id()].length; i++){
+      collapse(controlDict[node.id()][i])
+    }
+    controlDict[node.id()] = [];
+  }
 }
 
 function expand(node, force=false, click=true){
@@ -810,7 +807,7 @@ function expand(node, force=false, click=true){
   if (node.outdegree(false) == 0) {return 0;}
   if (force && click) {node.addClass("forceExpand");}
 
-  var targets = node.outgoers().edges(":simple").targets();
+  var targets = node.outgoers(":simple").targets();
 
   node.removeClass("collapsed");
   node.style("border-width", 0);
@@ -822,31 +819,20 @@ function expand(node, force=false, click=true){
       expand(targets[i], force, false);
     }
   }
-}
 
-controlDict = {};
-
-function expandcontrol(node){
   controlDict[node.id()] = [];
-  tobeexpanded = cy.collection();
-  for (let i=0; i<cy.nodes('.collapsed').length; i++){
-    if (cy.nodes('.collapsed')[i].connectedEdges(':simple:hidden').length == 0){
-      controlDict[node.id()].push(cy.nodes('.collapsed')[i])
-      tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[i]);
+  toExpand = cy.collection();
+  collapsedSources = targets.incomers(":simple").sources(".collapsed");
+
+  for (let i=0; i<collapsedSources.length; i++){
+    if (collapsedSources[i].outgoers().edges(':simple:hidden').length == 0){
+      controlDict[node.id()].push(collapsedSources[i])
+      toExpand.merge((collapsedSources[i]));
     }
   }
-  expand(tobeexpanded)
+  toExpand.removeClass("collapsed");
+  toExpand.style("border-width", 0);
 }
-
-function collapsecontrol(node){
-  if (controlDict[node.id()]){
-    for (let i=0; i<controlDict[node.id()].length; i++){
-      collapse(controlDict[node.id()][i])
-    }
-        controlDict[node.id()] = [];
-  }
-}
-
 
 function closeTip(tip) {
   let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
