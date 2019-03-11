@@ -3,6 +3,7 @@ var cy, elements, ids, ignore, iquery, queryNode, flagged;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
+const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
 
 function altName(target, alternative) {
   if (!target) {
@@ -28,7 +29,7 @@ function fetchAll(query) {
 // Offspring and new edges need to be reset with each iteration
 var offspring = [];  // New nodes that will be queried in next iteration
 var saved = [];  // Elements saved in memory in case they need to be added
-Promise.all(query.map(id => fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/interaction-min/"+id+".json")
+Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
 .then(res => res.json())
 .then(function(data) {
   ids.push(id);
@@ -203,6 +204,7 @@ cy = cytoscape({
       "min-zoomed-font-size": 8,
       "border-color": "orange",
       "border-width": 0,
+      "border-style": "double"
       }
     },
     {
@@ -285,7 +287,7 @@ var controller = new AbortController(); // Promise.all runs the fetches for all 
 var signal = controller.signal;
 
 await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
-     fetch("http://phyrerisk.bc.ic.ac.uk:9090/rest/dbref/" + node.data("id") +"/" + siteid + ".json", {signal})       // Fetch terms
+     fetch(`${fetch_link}/dbref/${node.data("id")}/${siteid}.json`, {signal})       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
     if (sitejson && sitejson.length != 0){
@@ -495,7 +497,7 @@ cy.on("mouseover", "node", function(){
 });
 
 
-cy.on("cxttap", "node", function(){
+cy.on("mouseout cxttap", "node", function(){
   this.tip.hide();
 });
 
@@ -634,6 +636,7 @@ var contextMenu = cy.contextMenus({
 	  selector: "*",
       coreAsWell: true,
       onClickFunction: function () {
+        cy.nodes(".collapsed").style("border-width", 0);
         var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
         var a = document.createElement('a');
         a.href = image;
@@ -641,6 +644,8 @@ var contextMenu = cy.contextMenus({
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        cy.edges().style("display", "element");
+        cy.nodes(".collapsed").style("border-width", 10);
       },
       hasTrailingDivider: true
     }
@@ -734,8 +739,9 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     var collapsees = cy.nodes(".collapsed");
     for (let i=0; i<collapsees.length; i++) {
       if (collapsees[i].outdegree(false) == 0) {
-        collapsees[i].style("shape", "ellipse");
+        collapsees[i].style("border-width", 0);
         collapsees[i].addClass("uncollapsed");
+        collapsees[i].removeClass("collapsed");
       }
     }
   }
@@ -748,6 +754,7 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     for (let i=0; i<uncollapsees.length; i++) {
       collapse(uncollapsees[i]);
       uncollapsees[i].removeClass("uncollapsed");
+      uncollapsees[i].addClass("collapsed");
     }
     if (checkEvents2.length != 0) {
       for (let i=0; i<checkEvents2.length; i++) {
@@ -766,7 +773,7 @@ function collapse(node){
   var targets = node.outgoers(":simple").targets(); 
 
   node.addClass("collapsed");
-  node.style("shape", "rectangle")
+  node.style("border-width", 10);
 
   for (let i=0; i<targets.length; i++) {
     if (targets[i].outdegree(false) == 0) {
@@ -795,7 +802,7 @@ function expand(node, force=false, click=true){
   var targets = node.outgoers().edges(":simple").targets();
 
   node.removeClass("collapsed");
-  node.style("shape", "ellipse");
+  node.style("border-width", 0);
 
   for (let i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
