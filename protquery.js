@@ -451,17 +451,19 @@ fetchAfter("GO", "terms")
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
-  if (this.hasClass("forceExpand")) {
+  if (this.hasClass("tempExpand") || this.hasClass("forceExpand")) {
+    this.removeClass("tempExpand");
     this.removeClass("forceExpand");
-    return 0;
-  }
-  if (!this.hasClass("collapsed")) {
-    collapse(this); 
-    collapsecontrol(this);
   }
   else {
-    expand(this);
-    expandcontrol(this)
+    if (!this.hasClass("collapsed")) {
+      collapse(this); 
+      collapsecontrol(this);
+    }
+    else {
+      expand(this);
+      expandcontrol(this)
+    }
   }
 });
 
@@ -471,6 +473,11 @@ cy.on("taphold", "node", function(){
 
 
 cy.on("mouseover", "node", function(){
+  if(this.hasClass("collapsed")) {
+    expand(this);
+    this.addClass("tempExpand");
+  }
+
   let link = "http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+this.data("id");
 
   if (this.tip === undefined) {
@@ -498,6 +505,10 @@ cy.on("mouseover", "node", function(){
 
 
 cy.on("mouseout cxttap", "node", function(){
+  if (this.hasClass("tempExpand")) {
+    collapse(this);
+  }
+
   this.tip.hide();
 });
 
