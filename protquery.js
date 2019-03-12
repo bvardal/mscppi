@@ -445,6 +445,7 @@ cy.on("tap", "node", function(){
   if (this.hasClass("tempExpand") || this.hasClass("forceExpand")) {
     this.removeClass("tempExpand");
     this.removeClass("forceExpand");
+    this.removeClass("collapsed");
   }
   else {
     if (!this.hasClass("collapsed")) {
@@ -503,17 +504,10 @@ cy.on("mouseout cxttap", "node", function(){
 
 cy.on("layoutstop", function(){
   console.time("autocollapse")
-  var targets = queryNode.outgoers().edges(":simple").targets();
+  var targets = queryNode.outgoers(":simple").targets();
   for (let i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
-  tobeexpanded = cy.collection();
-    for (z=0; z<cy.nodes('.collapsed').length; z++){
-        if (cy.nodes('.collapsed')[z].connectedEdges(':simple:hidden').length == 0){
-            tobeexpanded = tobeexpanded.union(cy.nodes('.collapsed')[z]);
-        }
-    }
-  expand(tobeexpanded)
   console.timeEnd("autocollapse")
   cy.center(queryNode);
   cy.panBy({x:$(window).width()*-0.1});
@@ -777,7 +771,7 @@ function collapse(node){
   node.style("border-width", 10);
 
   for (let i=0; i<targets.length; i++) {
-    if (targets[i].outdegree(false) == 0) {
+    if (targets[i].degree(false) == 0) {
       targets[i].style("display", "none");
     }
 
