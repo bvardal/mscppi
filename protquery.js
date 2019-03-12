@@ -1,5 +1,5 @@
 // Declare global variables that need to be reused
-var cy, elements, ids, ignore, iquery, queryNode, flagged;
+var cy, elements, ids, ignore, iquery, queryNode, flagged, offspring, saved, extrafetch, extrafetcher, nodecounter;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
@@ -25,10 +25,10 @@ function BuildNetwork() {
 }
 
 
-function fetchAll(query) {
+function fetchAll(query, extrafetch) {
 // Offspring and new edges need to be reset with each iteration
-var offspring = [];  // New nodes that will be queried in next iteration
-var saved = [];  // Elements saved in memory in case they need to be added
+offspring = [];  // New nodes that will be queried in next iteration
+saved = [];  // Elements saved in memory in case they need to be added
 Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
 .then(res => res.json())
 .then(function(data) {
@@ -71,7 +71,12 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
       ignoreGwidd.push(correctId)
     }
   }
-
+  
+ var newnode = false;
+  if (extrafetch == true && nodecounter != 0) {
+      newnode = true; 
+  }
+  
   // Push node to elements with relevant information
   elements.push({data: {
     id: id, 
@@ -84,20 +89,25 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
     gwidd: gwidd,
     structures: structures,
     phyreModels: phyreModels,
-    targets: targets
+    targets: targets,
+    newnode: newnode
   }});
 
   // Retrieve interactors
   var interactors = data.interactor;
 
   for (let i=0; i<interactors.length; i++) {
+   if (!extrafetch || nodecounter != 0) {
     if (interactors[i].intactId1 == interactors[i].intactId2) {
       elements.push({data: {source: id, target: id}});
       continue
     }
+   }
 
     var interactor = interactors[i].accession.replace(/-\d+$/, "");
-
+    
+    if (extrafetch == true && nodecounter != 0) {continue}
+    
     if(!ignore[id].includes(interactor)
        && !flagged.includes(interactor)) {
 
@@ -162,6 +172,12 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
   }
 })))
 .then(function(){
+    
+if (extrafetch == true) {
+    extrafetcher();
+}
+
+else {
 // End recursion if the next iteration needs to query >= 200 interactors
 if (offspring.length < 200) {
   elements = elements.concat(saved);
@@ -213,6 +229,8 @@ console.timeEnd("layout");
 queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
+function postprocessing() {
+
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
 
@@ -259,16 +277,18 @@ for (let i=0; i<cy.nodes().length; i++) {
 		}
 	}
 }
-
-
+}
+postprocessing();
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
 
 // Define function that fetches extra protein information from phyrerisk
-async function fetchAfter(datatype, sitejson) {
+async function fetchAfter(datatype, sitejson, extranodes) {
 
 var cancel;
+var nodeselector = ""
+if (extranodes == true) {nodeselector = "[?newnode]"}
 console.time(datatype)
 document.getElementById("loading" + datatype).innerHTML = "Loading...";
 var siteid = datatype
@@ -277,7 +297,7 @@ if (datatype == "OMIM") {siteid = "MIM"}
 var controller = new AbortController(); // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
 var signal = controller.signal;
 
-await Promise.all(cy.nodes('[^organismDiffers][^isoform]').map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
+await Promise.all(cy.nodes('[^organismDiffers][^isoform]' + nodeselector).map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
      fetch(`${fetch_link}/dbref/${node.id()}/${siteid}.json`, {signal})       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
@@ -436,9 +456,9 @@ for (let x=0; x<checkboxes.length; x++){
 console.timeEnd(datatype)
 }
 
-fetchAfter("OMIM", "IDs")
-fetchAfter("Reactome", "IDs")
-fetchAfter("GO", "terms")
+fetchAfter("OMIM", "IDs", false)
+fetchAfter("Reactome", "IDs", false)
+fetchAfter("GO", "terms", false)
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
@@ -543,6 +563,56 @@ var contextMenu = cy.contextMenus({
       hasTrailingDivider: true
     },
     {
+      id: "Expand",
+      content: "Expand network around node",
+      selector: "node",
+      onClickFunction: function (event) {
+      var target = event.target || event.cyTarget;
+      var queryid = target.id()
+      target.style({'background-image': "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Maya_3.svg/480px-Maya_3.svg.png", 'background-fit': 'contain' })
+      cy.removeListener('layoutstop')
+      var ignorekeys = Object.keys(ignore).slice();
+      for (let i=0; i<ignorekeys.length; i++) {
+          if (!ids.includes(ignorekeys[i])) {
+              delete ignore[ignorekeys[i]];
+          }
+      }
+      elements = [];
+      nodecounter = 0;
+      extrafetcher = function(){
+          nodecounter += 1
+           if (nodecounter < 2) { 
+              elements = elements.concat(saved);
+              fetchAll(offspring, true);
+            }
+            
+            else {
+                cy.nodes().lock()
+                cy.add(elements)
+                var layout = cy.layout({
+                    name: 'cose',
+                    fit: false,
+                    padding: 25,
+                    nodeDimensionsIncludeLabels: true,
+                    nodeRepulsion: 200000
+                })
+                layout.run()
+                cy.nodes().unlock()
+                cy.$("#" + queryid).style({'background-image': null})
+                elements = [];
+                nodecounter = 0;
+                postprocessing();
+                fetchAfter("OMIM", "IDs", true)
+                fetchAfter("Reactome", "IDs", true)
+                fetchAfter("GO", "terms", true)
+                // !!! reset newnode status at some point !!!
+                }
+      }
+      fetchAll([target.id()], true)
+    },
+     hasTrailingDivider: true
+    },
+    {
       id: "GOshared",
       content: "Show Gene Ontology features shared with query",
       selector: "node",
@@ -645,7 +715,7 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
-}})}
+}}})}
 
 
 // Display filtering method based on drop-down menu choice
