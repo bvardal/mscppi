@@ -71,7 +71,8 @@
     <label for="query">Please enter protein accession ID:</label>
     <input type="text" id="query" value="P02545" size=6>
     <button onclick="BuildNetwork()">Submit</button>&nbsp;&nbsp;&nbsp;   
-    <u id="info">Info</u>
+    <u id="info">Info</u>&nbsp;&nbsp;&nbsp; 
+    <u id="download" onClick="networkPNG()">Download</u>
     </div>
     <script>
       tippy("#info", {
@@ -84,12 +85,16 @@
           <p><img src="icons/gedge.png" height = "16px" width="40px"> Edge with modelled structure</p>
           <p><img src="icons/cblue.png" class="node_img"> Protein without known structure/model</p>
           <p><img src="icons/gborder.png" class="node_img"> / <img src="icons/bborder.png" class="node_img"> Expandable on click</p>
+          <p><u>Do not show me this box on load:</u> <input type="CHECKBOX" id="infoCheck" onClick="document.cookie = "showInfo = true";"></p>
           </div>
         `,
         allowHTML: true,
         animateFill: false,
+        interactive: true,
         sticky: true,
-        maxWidth: "100%"
+        maxWidth: "100%",
+        showOnInit: true,
+        delay: [0, 50]
       })
     </script>
     </div>
