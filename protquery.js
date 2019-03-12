@@ -1,5 +1,7 @@
 // Declare global variables that need to be reused
-var cy, elements, ids, ignore, iquery, queryNode, flagged, offspring, saved, extrafetch, extrafetcher, nodecounter;
+var cy, elements, ids, ignore, iquery, queryNode, flagged, saved;
+var unqueried, extrafetch, extrafetcher, nodecounter;
+var prevOffspring, offspring;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
@@ -119,7 +121,7 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
           // Non-human protein won't have a database page
           // Therefore node and edge immediately pushed with available info
 
-          elements.push({data: {
+          saved.push({data: {
             id: interactor,
             name: altName(interactors[i].label, interactor).toLowerCase(),
             fullName: altName(interactors[i].recommededName, "(Non-human)"),
@@ -128,7 +130,7 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
             GO: {"F":[], "P":[], "C":[]},
             commonGO: {}
           }});
-          elements.push(edge);
+          saved.push(edge);
 
         } else {  // If organism is human
           saved.push(edge); // Save edge to interactor (has no node yet)
@@ -179,13 +181,14 @@ if (extrafetch == true) {
 
 else {
 // End recursion if the next iteration needs to query >= 200 interactors
-if (offspring.length < 200) {
-  elements = elements.concat(saved);
-  fetchAll(offspring);
-}
+  if (offspring.length < 200 && offspring.length) {
+    elements = elements.concat(saved);
+    prevOffspring = offspring;
+    fetchAll(offspring);
+  }
 
 else {
-console.timeEnd("fetch");
+  console.timeEnd("fetch");
 
 // Once recursion has ended, generate and layout network
 console.time("layout");
@@ -677,41 +680,6 @@ var contextMenu = cy.contextMenus({
 		}
       },
       hasTrailingDivider: true
-    },
-    {
-      id: "jpg",
-      content: "Export network as JPG image",
-	  selector: "*",
-      coreAsWell: true,
-      onClickFunction: function () {
-        image = cy.jpg()
-        var a = document.createElement('a');
-        a.href = image
-        a.setAttribute("download",  "network.jpg")
-        document.body.appendChild(a);
-        a.clicfk();
-        document.body.removeChild(a);
-      },
-      hasTrailingDivider: true
-    },
-    {
-      id: "png",
-      content: "Export network as PNG image",
-	  selector: "*",
-      coreAsWell: true,
-      onClickFunction: function () {
-        cy.nodes(".collapsed").style("border-width", 0);
-        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
-        var a = document.createElement('a');
-        a.href = image;
-        a.setAttribute("download",  "network.png");
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        cy.edges().style("display", "element");
-        cy.nodes(".collapsed").style("border-width", 10);
-      },
-      hasTrailingDivider: true
     }
   ]
 });
@@ -841,7 +809,7 @@ function collapse(node){
   node.style("border-width", 10);
 
   for (let i=0; i<targets.length; i++) {
-    if (targets[i].degree(false) == 0) {
+    if (targets[i].degree(false) == 1) {
       targets[i].style("display", "none");
     }
 
@@ -902,3 +870,16 @@ function closeTip(tip) {
   let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
   tipInstance.hide();
 }
+
+function networkPNG() {
+        cy.nodes(".collapsed").style("border-width", 0);
+        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
+        var a = document.createElement('a');
+        a.href = image;
+        a.setAttribute("download",  "network.png");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        cy.edges().style("display", "element");
+        cy.nodes(".collapsed").style("border-width", 10);
+      }
