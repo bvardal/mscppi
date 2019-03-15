@@ -63,6 +63,7 @@
     top: 0px;
     right: 0px;
   }
+
 </style>
 </head>
 
@@ -72,7 +73,8 @@
     <input type="text" id="query" value="P02545" size=6>
     <button onclick="BuildNetwork()">Submit</button>&nbsp;&nbsp;&nbsp;   
     <u id="info">Info</u>&nbsp;&nbsp;&nbsp; 
-    <u id="download" onClick="networkPNG()">Download</u>
+    <u id="download" onClick="networkPNG(false)">Download network as PNG</u> &nbsp;&nbsp;&nbsp; 
+    <u id="downloadsimple" onClick="networkPNG(true)">Download network as PNG (simplified view)</u>
     </div>
     <script>
       tippy("#info", {
@@ -113,7 +115,7 @@
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
     <tr>
       <td>Human origin</td>
-      <td class="button_cell"><input type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
+      <td class="button_cell"><input id="organismcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
     </tr>
     <tr class="blank_row"></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>GO terms shared with query:</td></tr>

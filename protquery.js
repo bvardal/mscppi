@@ -1,6 +1,6 @@
 // Declare global variables that need to be reused
 var cy, elements, ids, ignore, iquery, queryNode, flagged, saved;
-var unqueried, extrafetch, extrafetcher, nodecounter;
+var unqueried, extrafetch, extrafetcher, nodecounter, postprocessing;
 var prevOffspring, offspring;
 const categories = ["F", "P", "C"];
 var checkEvents = [];
@@ -181,7 +181,7 @@ if (extrafetch == true) {
 
 else {
 // End recursion if the next iteration needs to query >= 200 interactors
-  if (offspring.length < 200 && offspring.length) {
+  if (ids.length + offspring.length < 200 && offspring.length) {
     elements = elements.concat(saved);
     prevOffspring = offspring;
     fetchAll(offspring);
@@ -232,30 +232,21 @@ console.timeEnd("layout");
 queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
-function postprocessing() {
 
+function disablecheckboxes() {
+    
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
 
-
 // Once network is rendered, display settings
 document.getElementById("settings").style.display = "block";
-document.getElementById("extraOMIM").disabled = true;
-document.getElementById("Reactomecheck").disabled = true;
-OMIMcheckboxes = document.getElementsByClassName("OMIMcheck")
-for (let x=0; x<OMIMcheckboxes.length; x++){
-    OMIMcheckboxes[x].disabled = true;
+$("input:checkbox").attr('disabled', 'disabled');
 }
-Reactomecheckboxes = document.getElementsByClassName("Reactomecheck")
-for (let x=0; x<Reactomecheckboxes.length; x++){
-    Reactomecheckboxes[x].disabled = true;
-}
-GOcheckboxes = document.getElementsByClassName("GOcheck")
-for (let x=0; x<GOcheckboxes.length; x++){
-    GOcheckboxes[x].disabled = true;
-}
+disablecheckboxes();
 
 
+postprocessing = function() {
+    
 // Add classes for non-human nodes and nodes without 3D structures
 for (let i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
@@ -265,6 +256,7 @@ for (let i=1; i<cy.nodes().length; i++) {
     cy.nodes()[i].style({"background-color": "green"})
   }
 }
+document.getElementById("organismcheck").disabled = false;
 
 
 // Add Gwidd complex model paths to relevant edges
@@ -496,20 +488,22 @@ cy.on("mouseover", "node", function(){
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
       content: `
-        <a class="cross" onClick="closeTip(this);")>&#x274C;</a>
-        <a href =${link} target="_blank">${this.id()}</a><br>
+        <a class="cross" onClick="ClosePinTip(this, true, true);")>&#x274C;</a>
+        <a href =${link} target="_blank">${this.id()}</a>
+        <img src="icons/pin.png"  width="20" height="20" onclick="ClosePinTip(this, false, false)"><br>
         ${this.data("fullName")}
-        
       `,
       theme: "light",
       placement: "bottom",
-      distance: 5,
+      distance: 2,
       duration: [100, 0],
-      animateFill: false,
       allowHTML: true,
       interactive: "true",
+      interactiveBorder: 1200000,
+      hideOnClick: "toggle",
       sticky: true,
-      size: "large",
+      arrow: true,
+      size: "regular",
       maxWidth: "100%"
     });
   }
@@ -521,8 +515,10 @@ cy.on("mouseout cxttap", "node", function(){
   if (this.hasClass("tempExpand")) {
     collapse(this);
   }
-
-  this.tip.hide();
+  
+  if (this.tip.props.hideOnClick) {
+        this.tip.hide();
+  }
 });
 
 cy.on("layoutstop", function(){
@@ -604,6 +600,7 @@ var contextMenu = cy.contextMenus({
                 cy.$("#" + queryid).style({'background-image': null})
                 elements = [];
                 nodecounter = 0;
+                disablecheckboxes();
                 postprocessing();
                 fetchAfter("OMIM", "IDs", true)
                 fetchAfter("Reactome", "IDs", true)
@@ -716,43 +713,43 @@ function Optionfilterchoice(checkBoxID, optionClass){
 
 // Define filtering functions for each method
 
-function Optionfilter(checkBoxID, optionClass) {
-  if (checkBoxID.checked){
-    checkEvents.push(optionClass)
+function Optionfilter(checkBoxID, optionClass, multiFilter=false) {
+  if (checkBoxID.checked || multiFilter){
+      if (checkBoxID.checked) {
+          checkEvents.push(optionClass)
+      }
     cy.$(optionClass).style("opacity", 0.15);
+    cy.$(optionClass).addClass('affectednodes')
     cy.$(optionClass).connectedEdges().style({
       "line-style": "dashed", 
       "width": "2"
     });
+    cy.$(optionClass).connectedEdges().addClass('affectednormal')
 	cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
       "width": "6",
 	  "opacity": 0.5
     });
+    cy.$(optionClass).connectedEdges('[gwiddcomplex]').addClass('affectedgwidd')
   }
              
   else {
     checkEvents.splice(checkEvents.indexOf(optionClass), 1);
     cy.nodes().style("opacity", 1);
+    cy.nodes().removeClass('affectednodes')
     cy.edges().style({
       "line-style": "solid", 
       "width": "4"
     });
+    cy.edges().removeClass('affectednormal')
 	cy.edges('[gwiddcomplex]').style({
       "width": "8",
 	  "opacity": 1
     });
+    cy.edges('[gwiddcomplex]').removeClass('affectedgwidd')
 
     if (checkEvents.length != 0){
       for (let i =0; i < checkEvents.length; i++) {
-        cy.$(checkEvents[i]).style("opacity", 0.15);
-        cy.$(checkEvents[i]).connectedEdges().style({
-          "line-style": "dashed", 
-          "width": "2"
-        });
-		cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
-		  "width": "6",
-		  "opacity": 0.5
-		});
+        Optionfilter({}, checkEvents[i], true)
       }
     }
   }
@@ -866,13 +863,26 @@ function expand(node, force=false, click=true){
   toExpand.style("border-width", 0);
 }
 
-function closeTip(tip) {
+function ClosePinTip(tip, close, unpinned) {
   let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
-  tipInstance.hide();
+  tipInstance.set({
+        hideOnClick: unpinned,
+    })
+  if (close) {
+      tipInstance.hide();
+  }
 }
 
-function networkPNG() {
-        cy.nodes(".collapsed").style("border-width", 0);
+function networkPNG(simple) {
+        if (simple) {
+            cy.nodes(".collapsed").style("border-width", 0);        
+            cy.nodes().difference(queryNode).style({"background-color": "blue", "opacity": 1}); // Image can't show nodes with less than 1 opacity for some reason
+            cy.edges().style({
+                "width": "4",
+                "line-color": "grey",
+                "opacity": 1
+            })
+        }
         var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
         var a = document.createElement('a');
         a.href = image;
@@ -880,6 +890,11 @@ function networkPNG() {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        cy.edges().style("display", "element");
-        cy.nodes(".collapsed").style("border-width", 10);
+        if (simple) {
+            cy.nodes(".collapsed").style("border-width", 0);
+            postprocessing();
+            cy.nodes(".affectednodes").style("opacity", 0.15)
+            cy.edges(".affectednormal").style("width", 2)
+            cy.edges(".affectedgwidd").style({"width": 6, "opacity": 0.5})  
+        }
       }
