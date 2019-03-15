@@ -499,7 +499,6 @@ cy.on("mouseover", "node", function(){
       duration: [100, 0],
       allowHTML: true,
       interactive: "true",
-      interactiveBorder: 1200000,
       hideOnClick: "toggle",
       sticky: true,
       arrow: true,
@@ -891,7 +890,7 @@ function networkPNG(simple) {
         a.click();
         document.body.removeChild(a);
         if (simple) {
-            cy.nodes(".collapsed").style("border-width", 0);
+            cy.nodes(".collapsed").style("border-width", 10);
             postprocessing();
             cy.nodes(".affectednodes").style("opacity", 0.15)
             cy.edges(".affectednormal").style("width", 2)
