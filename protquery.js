@@ -240,7 +240,8 @@ cy.edges(":loop").style("loop-direction", -90);
 
 // Once network is rendered, display settings
 document.getElementById("settings").style.display = "block";
-$("input:checkbox").attr('disabled', 'disabled');
+$("input:checkbox").prop('disabled', true);
+$(".showhide").prop('disabled', true)
 }
 disablecheckboxes();
 
@@ -278,14 +279,18 @@ postprocessing();
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
 
+
 // Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson, extranodes) {
-
-var cancel;
-var nodeselector = ""
-if (extranodes == true) {nodeselector = "[?newnode]"}
+    
 console.time(datatype)
 document.getElementById("loading" + datatype).innerHTML = "Loading...";
+
+var cancel;
+
+var nodeselector = ""
+if (extranodes == true) {nodeselector = "[?newnode]"}
+
 var siteid = datatype
 if (datatype == "OMIM") {siteid = "MIM"}
 
@@ -319,9 +324,13 @@ await Promise.all(cy.nodes('[^organismDiffers][^isoform]' + nodeselector).map(no
     }
     
      if (node == queryNode){
-         var querytermlength = node.data(datatype).length
-         if (datatype == "GO") {
-              querytermlength = Object.values(queryNode.data("GO")).length 
+         var querytermlength = node.data(datatype).length  // Get query OMIM/Reactome id list length
+         if (datatype == "GO") {  // Calculate query GO dictionary length
+             var allGOterms;
+             for (let i=0; i<Object.values(node.data(datatype)).length; i++) {
+                 allGOterms += Object.values(node.data(datatype))[i].length
+             }
+              querytermlength = allGOterms
          }
          if (querytermlength == 0) {
                  cancel = 1                                                    
@@ -338,47 +347,41 @@ if (cancel == 1) {
     return;                                
 }
  
-if (datatype == "OMIM" || datatype == "Reactome"){                                          // Basic "IDs-in-a-bag" comparison used in OMIM and Reactome fetches
+var categoryloop = 1
+var categoryindex = ""
+if (datatype == "GO") {
+    categoryloop = 3        // Force post-fetch functions to loop over all 3 lists of the GO dictionary
+}
+
+
+
+for (let h=0; h<categoryloop; h++) {       // Loop through GO categories or just once if not fetching GO                                        
     for (let i=0; i<cy.nodes().length; i++){
         var querydata = queryNode.data(datatype)
         var targetdata = cy.nodes()[i].data(datatype)
-        var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))
+        if (datatype == "GO") {
+            categoryindex = categories[h]  // Define GO category iterable to be used in intersection analysis, class names and selectors
+            querydata = queryNode.data(datatype)[categoryindex]
+            targetdata = cy.nodes()[i].data(datatype)[categoryindex]
+        }
+        var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))  // Basic "IDs-in-a-bag" comparison between query and all other nodes
         if (intersect.length == 0){
-            cy.nodes()[i].addClass("reject"+ datatype)
-            cy.nodes()[i].data("common"+ datatype, ["none"])
+            cy.nodes()[i].addClass("reject"+ datatype + categoryindex)
+            cy.nodes()[i].data("common"+ datatype + categoryindex, ["none"])
         }
         
         else {
-            cy.nodes()[i].data("common"+ datatype, intersect)
+            cy.nodes()[i].data("common"+ datatype + categoryindex, intersect)
         }   
     }
 }
 
-if (datatype == "GO"){                                                                                              // Alternative GO dictionary-specific "IDs-in-a-bag" comparison used in GO fetching
-    for (let i=0; i<3; i++) {       // Loop through categories
-        for (let j=0; j<cy.nodes().length; j++) {        // Loop through nodes excluding query
-        var queryGO = queryNode.data("GO")[categories[i]];
-        var targetGO = cy.nodes()[j].data("GO")[categories[i]];
-        var intersect = targetGO.filter(value => -1 !== queryGO.indexOf(value))
-        
-        if (intersect.length == 0) {
-          cy.nodes()[j].addClass("reject" + categories[i]);
-          cy.nodes()[j].data("commonGO")[categories[i]] = "none";
-        }
-
-        else {
-          cy.nodes()[j].data("commonGO")[categories[i]] = intersect.join(", ");
-        }
-     }
-   }     
-}
-
-
-if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra OMIM & Reactome buttons
-    var div = document.getElementById('extracheckboxes' + datatype)
+for (let h=0; h<categoryloop; h++) {
+    if (datatype == "GO") {categoryindex = categories[h]}
+    var div = document.getElementById('extracheckboxes' + datatype + categoryindex)	 // Adding extra individual term checkbox filters
     var tablehtml = '<table border=1>'
-    for (let z=0; z<queryNode.data("common" + datatype).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query OMIM.Reactome ID 
-        var term = queryNode.data("common" + datatype)[z]
+    for (let z=0; z<queryNode.data("common" + datatype + categoryindex).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query term 
+        var term = queryNode.data("common" + datatype + categoryindex)[z]
 		var string = term
 		if (datatype == "OMIM") {
 			var name = OMIMdatabase[term]									// Fetch query OMIM ID names from portable database to use on the buttons
@@ -389,14 +392,14 @@ if (datatype == "OMIM" || datatype == "Reactome"){														// Adding extra 
 		tablehtml += `
 		<tr>
 		<td>` + string + `</td>
-		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + z + `');"/></td>
+		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + categoryindex + z + `');"/></td>
 		</tr>
 		`    
 		
 		for (let i=1; i<cy.nodes().length; i++){                                            
-			var targetdata = cy.nodes()[i].data("common" + datatype)                       // Loop within previous loop for adding individual OMIM term reject classes to each node
+			var targetdata = cy.nodes()[i].data("common" + datatype + categoryindex)                       // Loop within previous loop for adding individual query term reject classes to each node
 			if (targetdata.indexOf(term) == -1) {
-				cy.nodes()[i].addClass("reject" + datatype + z)			// Replace removes whitespace from string so that the selector is valid
+				cy.nodes()[i].addClass("reject" + datatype + categoryindex + z)			
 			}
 		}
     }
@@ -413,19 +416,19 @@ if (datatype == "OMIM") {
 					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  " + OMIMdatabase[node.data("commonOMIM")[x]]
 				}
 				else {
-					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "	 	// Leave nameless OMIM IDs in but without name
+					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
 				}
 			}
 		}
 	}
 }
 
-if (datatype == "OMIM" || datatype =="Reactome") {
-    const button = document.getElementById("extra" + datatype)
-    const template = document.getElementById("extracheckboxes" + datatype)
-    const container = document.createElement('div' + datatype)
+for (let h=0; h<categoryloop; h++) {  // Make tippy popups for tables with extra individual query term checkboxes
+    if (datatype == "GO") {categoryindex = categories[h]}
+    const button = document.getElementById("extra" + datatype + categoryindex)
+    const template = document.getElementById("extracheckboxes" + datatype + categoryindex)
+    const container = document.createElement('div' + datatype + categoryindex)
     container.appendChild(document.importNode(template.content, true))
-
     tippy(button, {
           content: container.innerHTML,
           trigger: "click",
@@ -438,22 +441,28 @@ if (datatype == "OMIM" || datatype =="Reactome") {
           sticky: true,
           arrow: true,
           size: "regular",
-          onHide() {document.getElementById("extra" + datatype).innerHTML = "Show"},
-          onShow() {document.getElementById("extra" + datatype).innerHTML = "Hide"}
+          onHide() {var categoryindex = "";     // Redeclare and store looped GO category locally in function that will be called later, otherwise will only use the final for-loop index value
+          if (datatype == "GO") {categoryindex = categories[h]}
+          document.getElementById("extra" + datatype + categoryindex).innerHTML = "Show"},  
+          
+          onShow() {var categoryindex = "";
+          if (datatype == "GO") {categoryindex = categories[h];} 
+          document.getElementById("extra" + datatype + categoryindex).innerHTML = "Hide"}
     })
 }
 
 document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
-checkboxes = document.getElementsByClassName(datatype + "check")
-for (let x=0; x<checkboxes.length; x++){
-    checkboxes[x].disabled = false;
-}
+$("." + datatype + "check").prop('disabled', false)
 console.timeEnd(datatype)
 }
+
+
 
 fetchAfter("OMIM", "IDs", false)
 fetchAfter("Reactome", "IDs", false)
 fetchAfter("GO", "terms", false)
+
+
 
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
@@ -619,9 +628,9 @@ var contextMenu = cy.contextMenus({
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
-                alert(["Shared cellular component:\n" + target.data("commonGO").C,
-                       "Shared biological process:\n" + target.data("commonGO").P,
-                       "Shared molecular function:\n" + target.data("commonGO").F]
+                alert(["Shared cellular component:\n" + target.data("commonGOC").join(", "), 
+                       "Shared biological process:\n" + target.data("commonGOP").join(", "),
+                       "Shared molecular function:\n" + target.data("commonGOF").join(", ")]
                        .join("\n\n"));
                 }
              else {alert("GO terms still loading...")}
