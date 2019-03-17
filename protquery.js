@@ -497,9 +497,8 @@ cy.on("mouseover", "node", function(){
   if (this.tip === undefined) {
     this.tip = tippy(this.popperRef(), {
       content: `
-        <a class="cross" onClick="ClosePinTip(this, true, true);")>&#x274C;</a>
-        <a href =${link} target="_blank">${this.id()}</a>
-        <img src="icons/pin.png"  width="20" height="20" onclick="ClosePinTip(this, false, false)"><br>
+        <a class="pin" width="20" height="20" onclick="togglePin(this);">&#x1f4cc</a>
+        <a href =${link} target="_blank">${this.id()}</a><br>
         ${this.data("fullName")}
       `,
       theme: "light",
@@ -507,11 +506,10 @@ cy.on("mouseover", "node", function(){
       distance: 2,
       duration: [100, 0],
       allowHTML: true,
-      interactive: "true",
+      interactive: true,
       hideOnClick: "toggle",
       sticky: true,
       arrow: true,
-      size: "regular",
       maxWidth: "100%"
     });
   }
@@ -519,14 +517,18 @@ cy.on("mouseover", "node", function(){
 });
 
 
-cy.on("mouseout cxttap", "node", function(){
+cy.on("mouseout", "node", function(){
   if (this.hasClass("tempExpand")) {
     collapse(this);
   }
-  
-  if (this.tip.props.hideOnClick) {
-        this.tip.hide();
+
+  if (!this.tip.pinned) {
+    this.tip.hide(200);
   }
+});
+
+cy.on("cxttap", "node", function(){
+  this.tip.hide();
 });
 
 cy.on("layoutstop", function(){
@@ -816,6 +818,7 @@ function collapse(node){
   for (let i=0; i<targets.length; i++) {
     if (targets[i].degree(false) == 1) {
       targets[i].style("display", "none");
+      toggleNodeTip(targets[i], false);
     }
 
     else {
@@ -826,6 +829,7 @@ function collapse(node){
       // If all source nodes are collapsed, then collapse target
       if (collapsable) {
         targets[i].style("display", "none");
+        toggleNodeTip(targets[i], false);
         collapse(targets[i]);
       }
     }
@@ -851,6 +855,7 @@ function expand(node, force=false, click=true){
 
   for (let i=0; i<targets.length; i++) {
     targets[i].style("display", "element");
+    toggleNodeTip(targets[i], true);
 
     if (!targets[i].hasClass("collapsed") || force) {
       expand(targets[i], force, false);
@@ -871,13 +876,22 @@ function expand(node, force=false, click=true){
   toExpand.style("border-width", 0);
 }
 
-function ClosePinTip(tip, close, unpinned) {
+function togglePin(tip) {
   let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
-  tipInstance.set({
-        hideOnClick: unpinned,
-    })
-  if (close) {
-      tipInstance.hide();
+  tipInstance.pinned = !tipInstance.pinned;
+  if (!tipInstance.pinned) {
+    tipInstance.hide(200);
+  }
+}
+
+function toggleNodeTip(node, show) {
+  if (node.tip) {
+    if (show && node.tip.pinned) {
+      node.tip.show(0)
+    }
+    else {
+      node.tip.hide(0)
+    }
   }
 }
 
