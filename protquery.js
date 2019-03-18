@@ -427,10 +427,12 @@ for (let h=0; h<categoryloop; h++) {  // Make tippy popups for tables with extra
     if (datatype == "GO") {categoryindex = categories[h]}
     const button = document.getElementById("extra" + datatype + categoryindex)
     const template = document.getElementById("extracheckboxes" + datatype + categoryindex)
-    const container = document.createElement('div' + datatype + categoryindex)
+    const container = document.createElement('div')
+    container.id = "morecheck" + datatype + categoryindex
+    container.style.cssText = "overflow: auto; max-height:50vw;"
     container.appendChild(document.importNode(template.content, true))
     tippy(button, {
-          content: container.innerHTML,
+          content: container,
           trigger: "click",
           theme: "light",
           placement: "right-end",
@@ -556,16 +558,8 @@ var contextMenu = cy.contextMenus({
       selector: "node",
       onClickFunction: function (event) {
       var target = event.target || event.cyTarget;
-
       if (!target.data("organismDiffers")) {
-          // Add "-1" to end of link if isoform isn"t specified
-          // This is because pages without a specified isoform lack some information
-          if (target.id().length == 6){
-              var id = target.id() + "-1";
-          }
-          else { 
-            var id = target.id()}
-            window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+id);
+            window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+target.id());
        }
        else {alert("This protein is non-human and thus not in the PhyreRisk database.")}
     },
@@ -630,10 +624,25 @@ var contextMenu = cy.contextMenus({
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
-                alert(["Shared cellular component:\n" + target.data("commonGOC").join(", "), 
-                       "Shared biological process:\n" + target.data("commonGOP").join(", "),
-                       "Shared molecular function:\n" + target.data("commonGOF").join(", ")]
-                       .join("\n\n"));
+                target.tipOMIM =  tippy(target.popperRef(), {
+                  content: '<div style="overflow: auto; max-height:50vw;">' + 
+                                ["<b><font size='3em'>Shared cellular component:</font></b>" +"<br>" + target.data("commonGOC").join("<br>"), // Use <br> because tippy content can't parse \n characters as newline
+                                 "<b><font size='3em'>Shared biological process:</font></b>" +"<br>" + target.data("commonGOP").join("<br>"),
+                                 "<b><font size='3em'>Shared molecular function:</font></b>" + "<br>" + target.data("commonGOF").join("<br>")]
+                                 .join("<br><br>")
+                                 + '</div>',
+                  theme: "light",
+                  placement: "right",
+                  distance: 2,
+                  duration: [100, 0],
+                  allowHTML: true,
+                  interactive: true,
+                  hideOnClick: true,
+                  sticky: true,
+                  arrow: true,
+                  maxWidth: "100%"
+                });
+                target.tipOMIM.show()
                 }
              else {alert("GO terms still loading...")}
         }
@@ -649,7 +658,22 @@ var contextMenu = cy.contextMenus({
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
-                alert("Shared reactome pathways:\n" + target.data("commonReactome").join('\n'))
+                target.tipOMIM =  tippy(target.popperRef(), {
+                  content: '<div style="overflow: auto; max-height:50vw;">' +
+                  "<b><font size='3em'>Shared reactome pathways:</font></b>" + '<br>' + target.data("commonReactome").join('<br>')
+                  + '</div>',
+                  theme: "light",
+                  placement: "right",
+                  distance: 2,
+                  duration: [100, 0],
+                  allowHTML: true,
+                  interactive: true,
+                  hideOnClick: true,
+                  sticky: true,
+                  arrow: true,
+                  maxWidth: "100%"
+                });
+                target.tipOMIM.show()
                 }
              else {alert("Reactome IDs still loading...")}
         }
@@ -665,7 +689,22 @@ var contextMenu = cy.contextMenus({
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingOMIM").innerHTML == "Loading... complete." ) {
-                alert("Shared OMIM disease involvement:\n" + target.data("commonOMIM").join('\n'));
+                target.tipOMIM =  tippy(target.popperRef(), {
+                  content: '<div style="overflow: auto; max-height:50vw;">' +
+                  "<b><font size='3em'>Shared OMIM disease involvement:</font></b>" + "<br>" + target.data("commonOMIM").join('<br>')
+                  + '</div>',
+                  theme: "light",
+                  placement: "right",
+                  distance: 2,
+                  duration: [100, 0],
+                  allowHTML: true,
+                  interactive: true,
+                  hideOnClick: true,
+                  sticky: true,
+                  arrow: true,
+                  maxWidth: "100%"
+                });
+                target.tipOMIM.show()
                 }
             else {alert("OMIM IDs still loading...")}    
         }
@@ -729,33 +768,27 @@ function Optionfilter(checkBoxID, optionClass, multiFilter=false) {
           checkEvents.push(optionClass)
       }
     cy.$(optionClass).style("opacity", 0.15);
-    cy.$(optionClass).addClass('affectednodes')
     cy.$(optionClass).connectedEdges().style({
       "line-style": "dashed", 
       "width": "2"
     });
-    cy.$(optionClass).connectedEdges().addClass('affectednormal')
 	cy.$(optionClass).connectedEdges('[gwiddcomplex]').style({
       "width": "6",
 	  "opacity": 0.5
     });
-    cy.$(optionClass).connectedEdges('[gwiddcomplex]').addClass('affectedgwidd')
   }
              
   else {
     checkEvents.splice(checkEvents.indexOf(optionClass), 1);
     cy.nodes().style("opacity", 1);
-    cy.nodes().removeClass('affectednodes')
     cy.edges().style({
       "line-style": "solid", 
       "width": "4"
     });
-    cy.edges().removeClass('affectednormal')
 	cy.edges('[gwiddcomplex]').style({
       "width": "8",
 	  "opacity": 1
     });
-    cy.edges('[gwiddcomplex]').removeClass('affectedgwidd')
 
     if (checkEvents.length != 0){
       for (let i =0; i < checkEvents.length; i++) {
@@ -897,6 +930,11 @@ function toggleNodeTip(node, show) {
 
 function networkPNG(simple) {
         if (simple) {
+            var styles = []
+            for (let i=0; i<cy.elements().length; i++){
+                var style = cy.elements()[i].style()
+                styles.push(style)
+            }
             cy.nodes(".collapsed").style("border-width", 0);        
             cy.nodes().difference(queryNode).style({"background-color": "blue", "opacity": 1}); // Image can't show nodes with less than 1 opacity for some reason
             cy.edges().style({
@@ -913,10 +951,8 @@ function networkPNG(simple) {
         a.click();
         document.body.removeChild(a);
         if (simple) {
-            cy.nodes(".collapsed").style("border-width", 10);
-            postprocessing();
-            cy.nodes(".affectednodes").style("opacity", 0.15)
-            cy.edges(".affectednormal").style("width", 2)
-            cy.edges(".affectedgwidd").style({"width": 6, "opacity": 0.5})  
+            for (let i=0; i<cy.elements().length; i++) {
+                cy.elements()[i].style(styles[i])
+            }
         }
       }
