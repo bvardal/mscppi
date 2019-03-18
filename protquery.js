@@ -624,7 +624,7 @@ var contextMenu = cy.contextMenus({
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
-                target.tipOMIM =  tippy(target.popperRef(), {
+                target.tipGO =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' + 
                                 ["<b><font size='3em'>Shared cellular component:</font></b>" +"<br>" + target.data("commonGOC").join("<br>"), // Use <br> because tippy content can't parse \n characters as newline
                                  "<b><font size='3em'>Shared biological process:</font></b>" +"<br>" + target.data("commonGOP").join("<br>"),
@@ -637,12 +637,11 @@ var contextMenu = cy.contextMenus({
                   duration: [100, 0],
                   allowHTML: true,
                   interactive: true,
-                  hideOnClick: true,
                   sticky: true,
                   arrow: true,
                   maxWidth: "100%"
                 });
-                target.tipOMIM.show()
+                target.tipGO.show()
                 }
              else {alert("GO terms still loading...")}
         }
@@ -658,7 +657,7 @@ var contextMenu = cy.contextMenus({
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
-                target.tipOMIM =  tippy(target.popperRef(), {
+                target.tipReactome =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' +
                   "<b><font size='3em'>Shared reactome pathways:</font></b>" + '<br>' + target.data("commonReactome").join('<br>')
                   + '</div>',
@@ -668,12 +667,11 @@ var contextMenu = cy.contextMenus({
                   duration: [100, 0],
                   allowHTML: true,
                   interactive: true,
-                  hideOnClick: true,
                   sticky: true,
                   arrow: true,
                   maxWidth: "100%"
                 });
-                target.tipOMIM.show()
+                target.tipReactome.show()
                 }
              else {alert("Reactome IDs still loading...")}
         }
@@ -699,7 +697,6 @@ var contextMenu = cy.contextMenus({
                   duration: [100, 0],
                   allowHTML: true,
                   interactive: true,
-                  hideOnClick: true,
                   sticky: true,
                   arrow: true,
                   maxWidth: "100%"
