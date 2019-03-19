@@ -523,15 +523,33 @@ cy.on("mouseout", "node", function(){
   if (this.hasClass("tempExpand")) {
     collapse(this);
   }
-
+    
   if (!this.tip.pinned) {
     this.tip.hide(200);
   }
+  
+ this.successors().connectedNodes().unselect()
 });
 
 cy.on("cxttap", "node", function(){
   this.tip.hide();
 });
+
+cy.on("tapdragover", "node", function(){
+    this.successors().connectedNodes().select()
+});
+
+cy.on("grabon", "node", function(event){
+    if (!event.originalEvent.altKey) {
+        this.successors().connectedNodes().lock()
+        this.unlock()
+    }  
+});
+
+cy.on("freeon", "node", function(){
+    this.successors().connectedNodes().unlock()
+});
+
 
 cy.on("layoutstop", function(){
   console.time("autocollapse")
