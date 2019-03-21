@@ -57,13 +57,25 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
     }
   }
 
+  // Generate and push node data
+  collection.push({data: {
+    id: id, 
+    name: name,
+    fullName: fullName,
+    GO: {"F":[], "P":[], "C":[]},
+    commonGO: {},
+    OMIM: [], Reactome: [],
+    gwidd: gwidd,
+    structures: structures,
+    phyreModels: phyreModels,
+  }});
 
   // Retrieve interactors
   var interactors = data.interactor;
 
   for (let i=0; i<interactors.length; i++) {
     if (interactors[i].intactId1 == interactors[i].intactId2) {
-      proteins[id].targets.push(id)
+      collection.push({data: {source: id, target: id}});
       continue
     }
 
@@ -91,19 +103,6 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
       }
     }
   }
-
-  // Generate node data
-  collection.push({data: {
-    id: id, 
-    name: name,
-    fullName: fullName,
-    GO: {"F":[], "P":[], "C":[]},
-    commonGO: {},
-    OMIM: [], Reactome: [],
-    gwidd: gwidd,
-    structures: structures,
-    phyreModels: phyreModels,
-  }});
 })
 .catch(function(err) {
   // If error is encountered for initial query, submitted ID is likely invalid
@@ -194,57 +193,50 @@ console.timeEnd("layout");
 queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
-
-function disableCheckBoxes() {
-    
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
 
 // Once network is rendered, display settings
 document.getElementById("settings").style.display = "block";
-$("input:checkbox").prop('disabled', true);
-$(".showhide").prop('disabled', true)
+
+function disableCheckBoxes() {
+  $("input:checkbox").prop('disabled', true);
+  $(".showhide").prop('disabled', true)
 }
 disableCheckBoxes();
 
-
-postProcessing = function() {
-    
-// Add classes for non-human nodes and nodes without 3D structures
-for (let i=1; i<cy.nodes().length; i++) {
+function postProcessing() {
+  // Add classes for non-human nodes and nodes without 3D structures
+  for (let i=1; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
-    cy.nodes()[i].addClass("nonHuman");
+      cy.nodes()[i].addClass("nonHuman");
+    }
+    if (cy.nodes()[i].data("structures").length || 
+        cy.nodes()[i].data("phyreModels").length) {
+      cy.nodes()[i].style({"background-color": "green"})
+    }
   }
-    if (cy.nodes()[i].data("structures").length != 0 || cy.nodes()[i].data("phyreModels").length != 0) {
-    cy.nodes()[i].style({"background-color": "green"})
+
+  // Add Gwidd complex model paths to relevant edges
+  for (let i=0; i<cy.nodes().length; i++) {
+    let node = cy.nodes()[i]
+    if (node.data("gwidd")) {
+      for (let x=0; x<Object.keys(node.data("gwidd")).length; x++) {
+        var gwiddid = Object.keys(node.data("gwidd"))[x]
+        var complexedges = node.outgoers().edges('[target = "' + gwiddid + '"]')
+        complexedges.style({"line-color": "green", "width": 8 })
+        complexedges.data("gwiddcomplex", node.data("gwidd")[gwiddid])
+      }
+    }
   }
-}
-document.getElementById("organismcheck").disabled = false;
-
-
-// Add Gwidd complex model paths to relevant edges
-for (let i=0; i<cy.nodes().length; i++) {
-	let node = cy.nodes()[i]
-	
-	if (node.data("gwidd")) {
-		for (let x=0; x<Object.keys(node.data("gwidd")).length; x++) {
-			var gwiddid = Object.keys(node.data("gwidd"))[x]
-			var complexedges = node.outgoers().edges('[target = "' + gwiddid + '"]')
-			complexedges.style({"line-color": "green", "width": 8 })
-			complexedges.data("gwiddcomplex", node.data("gwidd")[gwiddid])
-		}
-	}
-}
 }
 postProcessing();
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
 
-
 // Define function that fetches extra protein information from phyrerisk
 async function fetchAfter(datatype, sitejson, extranodes) {
-    
 console.time(datatype)
 document.getElementById("loading" + datatype).innerHTML = "Loading...";
 
@@ -724,7 +716,6 @@ function Optionfilterchoice(checkBoxID, optionClass){
 
 
 // Define filtering functions for each method
-
 function Optionfilter(checkBoxID, optionClass, multiFilter=false) {
   if (checkBoxID.checked || multiFilter){
       if (checkBoxID.checked) {
@@ -803,6 +794,7 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
 // Define node collapse and expansion functions
 controlDict = {};
 
+
 function collapse(node){
   // Only consider non-loop edges and targets
   if (node.outdegree(false) == 0) {return 0;}
@@ -838,6 +830,7 @@ function collapse(node){
     controlDict[node.id()] = [];
   }
 }
+
 
 function expand(node, force=false, click=true){
   // Currently expands target node and all its successors recursively
@@ -892,30 +885,31 @@ function toggleNodeTip(node, show) {
 }
 
 function networkPNG(simple) {
-if (simple) {
-            var styles = []
-            for (let i=0; i<cy.elements().length; i++){
-                var style = cy.elements()[i].style()
-                styles.push(style)
-            }
-            cy.nodes(".collapsed").style("border-width", 0);        
-            cy.nodes().difference(queryNode).style({"background-color": "blue", "opacity": 1}); // Image can't show nodes with less than 1 opacity for some reason
-            cy.edges().style({
-                "width": "4",
-                "line-color": "grey",
-                "opacity": 1
-            })
-        }
-        var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
-        var a = document.createElement('a');
-        a.href = image;
-        a.setAttribute("download",  "network.png");
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        if (simple) {
-            for (let i=0; i<cy.elements().length; i++) {
-                cy.elements()[i].style(styles[i])
-            }
-        }
-      }
+  if (simple) {
+    var styles = []
+    for (let i=0; i<cy.elements().length; i++){
+      var style = cy.elements()[i].style()
+      styles.push(style)
+    }
+    cy.nodes(".collapsed").style("border-width", 0);        
+    // Image requires that all nodes have an opacity of 1
+    cy.nodes().difference(queryNode).style({"background-color": "blue", "opacity": 1});
+    cy.edges().style({
+      "width": "4",
+      "line-color": "grey",
+      "opacity": 1
+    });
+  }
+  var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
+  var a = document.createElement('a');
+  a.href = image;
+  a.setAttribute("download",  "network.png");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  if (simple) {
+    for (let i=0; i<cy.elements().length; i++) {
+      cy.elements()[i].style(styles[i])
+    }
+  }
+}
