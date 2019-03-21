@@ -1,40 +1,24 @@
 // Declare global variables that need to be reused
-var cy, elements, ids, ignore, iquery, queryNode, flagged, saved;
-var unqueried, extrafetch, extrafetcher, nodecounter, postprocessing;
-var prevOffspring, offspring;
+var ids, nonHumans, proteins, collection;
+var flagged = [];
 const categories = ["F", "P", "C"];
 var checkEvents = [];
 var checkEvents2 = [];
 const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
 
-function altName(target, alternative) {
-  if (!target) {
-    return alternative;
-  }
-  else {
-    return target;
-  }
-}
 
-// On new ID submission, reset elements etc.
-function BuildNetwork() {
-  elements = [], ids = [], flagged=[];
-  ignore = {};
-  iquery = document.getElementById("query").value.replace(/-1$/, "");
-  ignore[iquery] = [];
-  console.time("fetch");
-  fetchAll([iquery]);  // Begin to fetch interaction data
-}
-
-
-function fetchAll(query, extrafetch) {
+async function fetchAll(query, saved=[], source=null) {
 // Offspring and new edges need to be reset with each iteration
-offspring = [];  // New nodes that will be queried in next iteration
-saved = [];  // Elements saved in memory in case they need to be added
-Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
+collection = collection.concat(saved);
+saved = [];
+var offspring = [];  // New nodes that will be queried in next iteration
+
+await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
 .then(res => res.json())
 .then(function(data) {
   ids.push(id);
+  proteins[id] = {sources: [], targets: []};
+  let nonHumanTargets = [];
 
   if (data.interactor.length == 0) {
     throw new Error("No interactors found for query.");
@@ -48,13 +32,13 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
   
   // Populate structures, phyreModels, and gwidd
   for (let i=0; i<data.experimentalStructures.length; i++) {
-      var structure = data.experimentalStructures[i].pdbCode;
-      structures.push(structure);
-    }
-   
-  for (let i=0; i<data.phyreModels.length; i++){
-      var phyreModel = data.phyreModels[i].model_path;
-      phyreModels.push(phyreModel);
+    var structure = data.experimentalStructures[i].pdbCode;
+    structures.push(structure);
+  }
+
+  for (let i=0; i<data.phyreModels.length; i++) {
+    var phyreModel = data.phyreModels[i].model_path;
+    phyreModels.push(phyreModel);
   }
   
   for (let i=0; i<data.gwiddComplex.length; i++){
@@ -63,8 +47,7 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
     var correctId;
     if (match[1] == match[2] || match[1] != id){
       correctId = match[1];
-    }
-    else {
+    } else {
       correctId = match[2];
     }
 
@@ -73,124 +56,103 @@ Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.json`)
       ignoreGwidd.push(correctId)
     }
   }
-  
- var newnode = false;
-  if (extrafetch == true && nodecounter != 0) {
-      newnode = true; 
-  }
-  
-  // Push node to elements with relevant information
-  elements.push({data: {
-    id: id, 
-    name: name,
-    fullName: fullName,
-    GO: {"F":[], "P":[], "C":[]},
-    commonGO: {},
-    OMIM: [],
-    Reactome: [],
-    gwidd: gwidd,
-    structures: structures,
-    phyreModels: phyreModels,
-    targets: targets,
-    newnode: newnode
-  }});
+
 
   // Retrieve interactors
   var interactors = data.interactor;
 
   for (let i=0; i<interactors.length; i++) {
-   if (!extrafetch || nodecounter != 0) {
     if (interactors[i].intactId1 == interactors[i].intactId2) {
-      elements.push({data: {source: id, target: id}});
+      proteins[id].targets.push(id)
       continue
     }
-   }
 
     var interactor = interactors[i].accession.replace(/-\d+$/, "");
-    
-    if (extrafetch == true && nodecounter != 0) {continue}
-    
-    if(!ignore[id].includes(interactor)
-       && !flagged.includes(interactor)) {
 
-      // Generate edge
-      var edge = {data: {source: id, target: interactor}};
-
-      if (!ids.includes(interactor)) {
-        if (interactors[i].organismDiffers) {
-          // Non-human protein won't have a database page
-          // Therefore node and edge immediately pushed with available info
-
-          saved.push({data: {
-            id: interactor,
-            name: altName(interactors[i].label, interactor).toLowerCase(),
-            fullName: altName(interactors[i].recommededName, "(Non-human)"),
-            organismDiffers: true,
-            OMIM: [], Reactome: [], structures: [], phyreModels: [],
-            GO: {"F":[], "P":[], "C":[]},
-            commonGO: {}
-          }});
-          saved.push(edge);
-
-        } else {  // If organism is human
-          saved.push(edge); // Save edge to interactor (has no node yet)
-
-          // Ignore previously encountered binary interactions
-          if(Object.keys(ignore).includes(interactor)) {
-            ignore[interactor].push(id);
-          } else {
-            offspring.push(interactor); // Prepare to query interactor
-            ignore[interactor] = [id];
-          }
-        }
-      } else { // If protein has already been queried and node exists
-        elements.push(edge); // interactor already has a node so add edge
-        ignore[interactor].push(id);
+    if(!interactors[i].organismDiffers) {
+      proteins[id].targets.push(interactor);
+      if (!ids.concat(offspring).concat(flagged).includes(interactor)) {
+        offspring.push(interactor);
+      }
+    }
+    else {
+      saved.push({data: {source: id, target: interactor}});
+      if (!nonHumans.includes(interactor)) {
+        nonHumans.push(interactor);
+        saved.push({data: {
+          id: interactor,
+          name: interactor.toLowerCase(),
+          fullName: interactor.toLowerCase() + " (Non-human)",
+          organismDiffers: true,
+          OMIM: [], Reactome: [], structures: [], phyreModels: [],
+          GO: {"F":[], "P":[], "C":[]},
+          commonGO: {}
+        }});
       }
     }
   }
+
+  // Generate node data
+  collection.push({data: {
+    id: id, 
+    name: name,
+    fullName: fullName,
+    GO: {"F":[], "P":[], "C":[]},
+    commonGO: {},
+    OMIM: [], Reactome: [],
+    gwidd: gwidd,
+    structures: structures,
+    phyreModels: phyreModels,
+  }});
 })
 .catch(function(err) {
   // If error is encountered for initial query, submitted ID is likely invalid
   if (id == iquery) {
-    console.timeEnd("fetch");
-    if (err == "Error: No interactors found for query.") {
-      throw new Error("No interactors found for query.")
-    }
-    else {
-      throw new Error("Invalid accession ID.");
-    }
+    throw(err+ "\nFailed on first query.");
   }
-
-
-  // If a new node being queried is invalid, remove all associated edges
   else {
     flagged.push(id);
-    for (let i=elements.length-1; i>=0; i--) {
-      if (elements[i].data.target == id) {
-        elements.splice(i, 1);
+  }
+})));
+
+if (!source) {
+  if (ids.length + offspring.length >= 100 || !offspring.length) {
+    for (let i=0; i<ids.length; i++) {
+      let source = proteins[ids[i]];
+      let targets = source.targets;
+
+      for (let j=0; j<targets.length; j++) {
+        if (proteins[targets[j]] && !source.sources.includes(targets[j])) {
+          proteins[targets[j]].sources.push(ids[i]);
+          collection.push({data: {source: ids[i], target: targets[j]}});
+        }
       }
     }
+    return collection;
   }
-})))
-.then(function(){
-    
-if (extrafetch == true) {
-    extrafetcher();
+  else {
+    return await fetchAll(offspring, saved);
+  }
 }
 
 else {
-// End recursion if the next iteration needs to query >= 200 interactors
-  if (ids.length + offspring.length < 200 && offspring.length) {
-    elements = elements.concat(saved);
-    prevOffspring = offspring;
-    fetchAll(offspring);
+  for (let i=0; i<query.length; i++) {
+    if(proteins[query[i]]) {
+      collection.push({data: {source: source, target: query[i]}});
+    }
   }
+  return collection;
+}
+}
 
-else {
-  console.timeEnd("fetch");
+async function BuildNetwork() {
+ids = [], nonHumans = [], collection= [];
+proteins = {};
+iquery = document.getElementById("query").value.replace(/-1$/, "");
+console.time("fetch");
+let elements = await fetchAll([iquery]);
+console.timeEnd("fetch");
 
-// Once recursion has ended, generate and layout network
 console.time("layout");
 cy = cytoscape({
   container: document.getElementById("cy"),
@@ -233,7 +195,7 @@ queryNode = cy.nodes()[0];
 queryNode.style({"background-color": "red"});
 
 
-function disablecheckboxes() {
+function disableCheckBoxes() {
     
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
@@ -243,10 +205,10 @@ document.getElementById("settings").style.display = "block";
 $("input:checkbox").prop('disabled', true);
 $(".showhide").prop('disabled', true)
 }
-disablecheckboxes();
+disableCheckBoxes();
 
 
-postprocessing = function() {
+postProcessing = function() {
     
 // Add classes for non-human nodes and nodes without 3D structures
 for (let i=1; i<cy.nodes().length; i++) {
@@ -274,7 +236,7 @@ for (let i=0; i<cy.nodes().length; i++) {
 	}
 }
 }
-postprocessing();
+postProcessing();
 
 // Add collection for nodes removed via OptionfilterV2
 cy.scratch("removed", cy.collection());
@@ -575,64 +537,51 @@ var contextMenu = cy.contextMenus({
       content: "Link to PhyreRisk page",
       selector: "node",
       onClickFunction: function (event) {
-      var target = event.target || event.cyTarget;
-      if (!target.data("organismDiffers")) {
-            window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+target.id());
-       }
-       else {alert("This protein is non-human and thus not in the PhyreRisk database.")}
-    },
+        var target = event.target || event.cyTarget;
+        if (!target.data("organismDiffers")) {
+          window.open("http://phyrerisk.bc.ic.ac.uk:8080/isoform/"+target.id());
+        }
+        else {
+          alert("This protein is non-human and thus not in the PhyreRisk database.")
+        }
+      },
       hasTrailingDivider: true
     },
     {
       id: "Expand",
       content: "Expand network around node",
       selector: "node",
-      onClickFunction: function (event) {
-      var target = event.target || event.cyTarget;
-      var queryid = target.id()
-      target.style({'background-image': "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Maya_3.svg/480px-Maya_3.svg.png", 'background-fit': 'contain' })
-      cy.removeListener('layoutstop')
-      var ignorekeys = Object.keys(ignore).slice();
-      for (let i=0; i<ignorekeys.length; i++) {
-          if (!ids.includes(ignorekeys[i])) {
-              delete ignore[ignorekeys[i]];
-          }
-      }
-      elements = [];
-      nodecounter = 0;
-      extrafetcher = function(){
-          nodecounter += 1
-           if (nodecounter < 2) { 
-              elements = elements.concat(saved);
-              fetchAll(offspring, true);
-            }
-            
-            else {
-                cy.nodes().lock()
-                cy.add(elements)
-                var layout = cy.layout({
-                    name: 'cose',
-                    fit: false,
-                    padding: 25,
-                    nodeDimensionsIncludeLabels: true,
-                    nodeRepulsion: 200000
-                })
-                layout.run()
-                cy.nodes().unlock()
-                cy.$("#" + queryid).style({'background-image': null})
-                elements = [];
-                nodecounter = 0;
-                disablecheckboxes();
-                postprocessing();
-                fetchAfter("OMIM", "IDs", true)
-                fetchAfter("Reactome", "IDs", true)
-                fetchAfter("GO", "terms", true)
-                // !!! reset newnode status at some point !!!
-                }
-      }
-      fetchAll([target.id()], true)
-    },
-     hasTrailingDivider: true
+      onClickFunction: async function (event) {
+        var target = event.target || event.cyTarget;
+        let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
+        if (offspring.length) {
+          target.style({
+            "background-image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Maya_3.svg/480px-Maya_3.svg.png", 
+            "background-fit": "contain"
+          });
+          cy.removeListener('layoutstop');
+          console.time("network expansion");
+          let elements = await fetchAll(offspring, [], target.id());
+          console.timeEnd("network expansion");
+          cy.nodes().lock()
+          cy.add(elements)
+          cy.layout({
+            name: 'cose',
+            fit: false,
+            padding: 25,
+            nodeDimensionsIncludeLabels: true,
+            nodeRepulsion: 200000
+          }).run()
+          cy.nodes().unlock();
+          postProcessing();
+          disableCheckBoxes();
+          target.style({'background-image': null});
+          fetchAfter("OMIM", "IDs", true);
+          fetchAfter("Reactome", "IDs", true);
+          fetchAfter("GO", "terms", true);
+        }
+      }, 
+      hasTrailingDivider: true
     },
     {
       id: "GOshared",
@@ -744,8 +693,7 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
-}}})}
-
+}
 
 // Display filtering method based on drop-down menu choice
 
@@ -944,7 +892,7 @@ function toggleNodeTip(node, show) {
 }
 
 function networkPNG(simple) {
-        if (simple) {
+if (simple) {
             var styles = []
             for (let i=0; i<cy.elements().length; i++){
                 var style = cy.elements()[i].style()
