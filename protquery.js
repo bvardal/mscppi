@@ -2,7 +2,7 @@
 var ids, nonHumans, proteins, collection;
 var flagged = [];
 const categories = ["F", "P", "C"];
-var classmaker;
+var classmaker, expandcontrol;
 var checkEvents = [];
 var checkEvents2 = [];
 const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
@@ -510,6 +510,20 @@ cy.on("layoutstop", function(){
   for (let i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
+  var toExpand = cy.collection();
+  var toExpandlist = []
+  
+  expandcontrol = function(){
+        for (let i=0; i<cy.nodes('.collapsed').length; i++){
+            if (cy.nodes('.collapsed')[i].connectedEdges(':simple:hidden').length == 0){
+                toExpandlist.push(cy.nodes('.collapsed')[i])
+                toExpand = toExpand.union(cy.nodes('.collapsed')[i]);
+            }
+        }
+        toExpand.removeClass("collapsed");
+        toExpand.style("border-width", 0);
+  }
+  expandcontrol();
   console.timeEnd("autocollapse")
   cy.center(queryNode);
   cy.panBy({x:$(window).width()*-0.1});
@@ -879,19 +893,13 @@ function expand(node, force=false, click=true){
       expand(targets[i], force, false);
     }
   }
-
+  
+  var toExpand = cy.collection();
+  var toExpandlist = []
   controlDict[node.id()] = [];
-  toExpand = cy.collection();
-  collapsedSources = targets.incomers(":simple").sources(".collapsed");
-
-  for (let i=0; i<collapsedSources.length; i++){
-    if (collapsedSources[i].outgoers().edges(':simple:hidden').length == 0){
-      controlDict[node.id()].push(collapsedSources[i])
-      toExpand.merge((collapsedSources[i]));
-    }
-  }
-  toExpand.removeClass("collapsed");
-  toExpand.style("border-width", 0);
+  expandcontrol();
+  controlDict[node.id()] = toExpandlist
+  
 }
 
 function togglePin(tip) {
