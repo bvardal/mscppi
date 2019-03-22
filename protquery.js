@@ -90,11 +90,12 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
     else {
       saved.push({data: {source: id, target: interactor}});
       if (!nonHumans.includes(interactor)) {
+        var label = interactors[i].label || interactor
         nonHumans.push(interactor);
         saved.push({data: {
           id: interactor,
-          name: interactors[i].label.toLowerCase(),
-          fullName: interactors[i].label.toLowerCase() + " (Non-human)",
+          name: label.toLowerCase(),
+          fullName: label.toLowerCase() + " (Non-human)",
           organismDiffers: true,
           OMIM: [], Reactome: [], structures: [], phyreModels: [],
           GO: {"F":[], "P":[], "C":[]}
