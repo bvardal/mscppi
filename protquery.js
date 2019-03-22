@@ -2,7 +2,7 @@
 var ids, nonHumans, proteins, collection;
 var flagged = [];
 const categories = ["F", "P", "C"];
-var classmaker, expandcontrol;
+var classmaker;
 var checkEvents = [];
 var checkEvents2 = [];
 const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
@@ -510,20 +510,6 @@ cy.on("layoutstop", function(){
   for (let i=0; i<targets.length; i++) {
     collapse(targets[i]);
   }
-  var toExpand = cy.collection();
-  var toExpandlist = []
-  
-  expandcontrol = function(){
-        for (let i=0; i<cy.nodes('.collapsed').length; i++){
-            if (cy.nodes('.collapsed')[i].connectedEdges(':simple:hidden').length == 0){
-                toExpandlist.push(cy.nodes('.collapsed')[i])
-                toExpand = toExpand.union(cy.nodes('.collapsed')[i]);
-            }
-        }
-        toExpand.removeClass("collapsed");
-        toExpand.style("border-width", 0);
-  }
-  expandcontrol();
   console.timeEnd("autocollapse")
   cy.center(queryNode);
   cy.panBy({x:$(window).width()*-0.1});
@@ -840,30 +826,30 @@ controlDict = {};
 
 function collapse(node){
   // Only consider non-loop edges and targets
-  if (node.outdegree(false) == 0) {return 0;}
-  var targets = node.outgoers(":simple").targets(); 
-
+  if (node.outdegree(false) == 0) {
+    return 0;
+  }
+  
   node.addClass("collapsed");
   node.style("border-width", 10);
+  let targets = node.outgoers(":simple").targets(); 
 
   for (let i=0; i<targets.length; i++) {
-    if (targets[i].degree(false) == 1) {
+    var incomers = targets[i].incomers(":simple").sources();
+    // Check if every source node is collapsed
+    var collapsable = incomers.every(incomer => incomer.hasClass("collapsed"));
+
+    // If all source nodes are collapsed, then collapse target
+    if (collapsable) {
       targets[i].style("display", "none");
       toggleNodeTip(targets[i], false);
+      collapse(targets[i]);
     }
+  }
 
-    else {
-      var incomers = targets[i].incomers(":simple").sources();
-      // Check if every source node is collapsed
-      var collapsable = incomers.every(incomer => incomer.hasClass("collapsed"));
-
-      // If all source nodes are collapsed, then collapse target
-      if (collapsable) {
-        targets[i].style("display", "none");
-        toggleNodeTip(targets[i], false);
-        collapse(targets[i]);
-      }
-    }
+  if (node.connectedEdges(":hidden").length == 0) {
+    node.removeClass("collapsed");
+    node.style("border-width", 0);
   }
 
   if (controlDict[node.id()]){
@@ -893,14 +879,19 @@ function expand(node, force=false, click=true){
       expand(targets[i], force, false);
     }
   }
-  
-  var toExpand = cy.collection();
-  var toExpandlist = []
+
   controlDict[node.id()] = [];
-  expandcontrol();
-  controlDict[node.id()] = toExpandlist
-  
+  let collapsedSources = cy.nodes(".collapsed");
+
+  for (let i=collapsedSources.length-1; i>=0; i--){
+    if (collapsedSources[i].outgoers().edges(':simple:hidden').length == 0) {
+      controlDict[node.id()].push(collapsedSources[i]);
+      collapsedSources[i].removeClass("collapsed");
+      collapsedSources[i].style("border-width", 0);
+    }
+  }
 }
+
 
 function togglePin(tip) {
   let tipInstance = $(tip).closest('.tippy-popper')[0]._tippy;
