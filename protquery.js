@@ -93,8 +93,8 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
         nonHumans.push(interactor);
         saved.push({data: {
           id: interactor,
-          name: interactor.toLowerCase(),
-          fullName: interactor.toLowerCase() + " (Non-human)",
+          name: interactors[i].label.toLowerCase(),
+          fullName: interactors[i].label.toLowerCase() + " (Non-human)",
           organismDiffers: true,
           OMIM: [], Reactome: [], structures: [], phyreModels: [],
           GO: {"F":[], "P":[], "C":[]},
