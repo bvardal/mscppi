@@ -2,6 +2,7 @@
 var ids, nonHumans, proteins, collection;
 var flagged = [];
 const categories = ["F", "P", "C"];
+var classmaker;
 var checkEvents = [];
 var checkEvents2 = [];
 const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
@@ -63,7 +64,6 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
     name: name,
     fullName: fullName,
     GO: {"F":[], "P":[], "C":[]},
-    commonGO: {},
     OMIM: [], Reactome: [],
     gwidd: gwidd,
     structures: structures,
@@ -97,8 +97,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
           fullName: interactors[i].label.toLowerCase() + " (Non-human)",
           organismDiffers: true,
           OMIM: [], Reactome: [], structures: [], phyreModels: [],
-          GO: {"F":[], "P":[], "C":[]},
-          commonGO: {}
+          GO: {"F":[], "P":[], "C":[]}
         }});
       }
     }
@@ -115,7 +114,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 })));
 
 if (!source) {
-  if (ids.length + offspring.length >= 100 || !offspring.length) {
+  if (ids.length + offspring.length >= 80 || !offspring.length) {
     for (let i=0; i<ids.length; i++) {
       let source = proteins[ids[i]];
       let targets = source.targets;
@@ -189,9 +188,9 @@ cy = cytoscape({
 console.timeEnd("layout");
 
 
-// Colour query node 
-queryNode = cy.nodes()[0];
-queryNode.style({"background-color": "red"});
+// Define and indicate query node 
+queryNode = cy.nodes("#"+iquery);
+document.getElementById("queryindicator").innerHTML = "Query: " + iquery
 
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
@@ -207,7 +206,7 @@ disableCheckBoxes();
 
 function postProcessing() {
   // Add classes for non-human nodes and nodes without 3D structures
-  for (let i=1; i<cy.nodes().length; i++) {
+  for (let i=0; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
       cy.nodes()[i].addClass("nonHuman");
     }
@@ -216,7 +215,9 @@ function postProcessing() {
       cy.nodes()[i].style({"background-color": "green"})
     }
   }
-
+  $("#organismcheck").prop('disabled', false)
+  queryNode.style({"background-color": "red"});
+  
   // Add Gwidd complex model paths to relevant edges
   for (let i=0; i<cy.nodes().length; i++) {
     let node = cy.nodes()[i]
@@ -240,19 +241,14 @@ async function fetchAfter(datatype, sitejson, extranodes) {
 console.time(datatype)
 document.getElementById("loading" + datatype).innerHTML = "Loading...";
 
-var cancel;
-
 var nodeselector = ""
 if (extranodes == true) {nodeselector = "[?newnode]"}
 
 var siteid = datatype
 if (datatype == "OMIM") {siteid = "MIM"}
 
-var controller = new AbortController(); // Promise.all runs the fetches for all nodes immediately and simultaneously (fastest method), but cannot be cancelled, so if query has no terms, the sent fetch requests are cancelled
-var signal = controller.signal;
-
-await Promise.all(cy.nodes('[^organismDiffers][^isoform]' + nodeselector).map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
-     fetch(`${fetch_link}/dbref/${node.id()}/${siteid}.json`, {signal})       // Fetch terms
+await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>                                                          // Iterate only over human and non-isoform proteins, for which a phyrerisk page exists
+     fetch(`${fetch_link}/dbref/${node.id()}/${siteid}.json`)       // Fetch terms
     .then(response => response.json())
     .then(function (sitejson) { 
     if (sitejson && sitejson.length != 0){
@@ -275,140 +271,142 @@ await Promise.all(cy.nodes('[^organismDiffers][^isoform]' + nodeselector).map(no
                 node.data(datatype)[term.charAt(0)].push(term.slice(2));
             }
         }
-    }
-    
-     if (node == queryNode){
-         var querytermlength = node.data(datatype).length  // Get query OMIM/Reactome id list length
-         if (datatype == "GO") {  // Calculate query GO dictionary length
-             var allGOterms;
-             for (let i=0; i<Object.values(node.data(datatype)).length; i++) {
-                 allGOterms += Object.values(node.data(datatype))[i].length
-             }
-              querytermlength = allGOterms
-         }
-         if (querytermlength == 0) {
-                 cancel = 1                                                    
-                 controller.abort();                                  // Stop fetching from database if query has no terms, causes an error that is caught by catch, promise.all resolves soon after. 
-             }
-     }                                                                        
+    }                                                                    
    })
 ))
 .catch(function(){})
 
-if (cancel == 1) {
-    document.getElementById("loading" + datatype).innerHTML = "No " + datatype + " "+ sitejson + " found for query."
-    console.timeEnd(datatype)
-    return;                                
-}
  
-var categoryloop = 1
-var categoryindex = ""
-if (datatype == "GO") {
-    categoryloop = 3        // Force post-fetch functions to loop over all 3 lists of the GO dictionary
-}
-
-
-
-for (let h=0; h<categoryloop; h++) {       // Loop through GO categories or just once if not fetching GO                                        
-    for (let i=0; i<cy.nodes().length; i++){
-        var querydata = queryNode.data(datatype)
-        var targetdata = cy.nodes()[i].data(datatype)
+ if (typeof classmaker !== "function") {
+    classmaker = function(datatype, queryreset){
+        var categoryloop = 1
+        var categoryindex = ""
         if (datatype == "GO") {
-            categoryindex = categories[h]  // Define GO category iterable to be used in intersection analysis, class names and selectors
-            querydata = queryNode.data(datatype)[categoryindex]
-            targetdata = cy.nodes()[i].data(datatype)[categoryindex]
+            categoryloop = 3        // Force post-fetch functions to loop over all 3 lists of the GO dictionary
         }
-        var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))  // Basic "IDs-in-a-bag" comparison between query and all other nodes
-        if (intersect.length == 0){
-            cy.nodes()[i].addClass("reject"+ datatype + categoryindex)
-            cy.nodes()[i].data("common"+ datatype + categoryindex, ["none"])
+
+
+        for (let h=0; h<categoryloop; h++) {       // Loop through GO categories or just once if not fetching GO                                        
+            for (let i=0; i<cy.nodes().length; i++){
+                var querydata = queryNode.data(datatype)
+                var targetdata = cy.nodes()[i].data(datatype)
+                if (datatype == "GO") {
+                    categoryindex = categories[h]  // Define GO category iterable to be used in intersection analysis, class names and selectors
+                    querydata = queryNode.data(datatype)[categoryindex]
+                    targetdata = cy.nodes()[i].data(datatype)[categoryindex]
+                }
+                var intersect = targetdata.filter(value => -1 !== querydata.indexOf(value))  // Basic "IDs-in-a-bag" comparison between query and all other nodes
+                if (intersect.length == 0){
+                    cy.nodes()[i].addClass("reject"+ datatype + categoryindex)
+                    cy.nodes()[i].data("common"+ datatype + categoryindex, ["none"])
+                }
+                
+                else {
+                    cy.nodes()[i].data("common"+ datatype + categoryindex, intersect)
+                }   
+            }
         }
-        
+
+        for (let h=0; h<categoryloop; h++) {
+            if (datatype == "GO") {categoryindex = categories[h]}
+            var div = document.getElementById('extracheckboxes' + datatype + categoryindex)	 // Adding extra individual term checkbox filters
+            div.innerHTML = ""
+            var tablehtml = '<table border=1>'
+            for (let z=0; z<queryNode.data("common" + datatype + categoryindex).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query term 
+                var term = queryNode.data("common" + datatype + categoryindex)[z]
+                var string = term
+                if (datatype == "OMIM") {
+                    var name = OMIMdatabase[term]									// Fetch query OMIM ID names from portable database to use on the buttons
+                    if (!OMIMdatabase[term]) {name = ""}
+                    string = "(OMIM: " + term + ")  " + name 
+                }
+                
+                tablehtml += `
+                <tr>
+                <td>` + string + `</td>
+                <td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + categoryindex + z + `');"/></td>
+                </tr>
+                `    
+                
+                for (let i=0; i<cy.nodes().length; i++){                                            
+                    var targetdata = cy.nodes()[i].data("common" + datatype + categoryindex)                       // Loop within previous loop for adding individual query term reject classes to each node
+                    if (targetdata.indexOf(term) == -1) {
+                        cy.nodes()[i].addClass("reject" + datatype + categoryindex + z)			
+                    }
+                }
+            }
+            tablehtml += '</table>'
+            div.innerHTML += tablehtml
+        }
+
+        if (datatype == "OMIM") {
+            for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
+                let node = cy.nodes()[i]
+                if (!node.data("commonOMIM").includes("none")) {
+                    for (let x=0; x<node.data("commonOMIM").length; x++) {
+                        if (OMIMdatabase[node.data("commonOMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
+                            node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  " + OMIMdatabase[node.data("commonOMIM")[x]]
+                        }
+                        else {
+                            node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
+                        }
+                    }
+                }
+            }
+        }
+
+        for (let h=0; h<categoryloop; h++) {  // Make tippy popups for tables with extra individual query term checkboxes
+            if (datatype == "GO") {categoryindex = categories[h]}
+            const button = document.getElementById("extra" + datatype + categoryindex)
+            const template = document.getElementById("extracheckboxes" + datatype + categoryindex)
+            const container = document.createElement('div')
+            container.id = "morecheck" + datatype + categoryindex
+            container.style.cssText = "overflow: auto; max-height:50vw;"
+            container.appendChild(document.importNode(template.content, true))
+            if (queryreset) {
+                button._tippy.destroy()
+                }
+            tippy(button, {
+                  content: container,
+                  trigger: "click",
+                  theme: "light",
+                  placement: "right-end",
+                  distance: 10,
+                  duration: [100, 0],
+                  allowHTML: true,
+                  interactive: "true",
+                  sticky: true,
+                  arrow: true,
+                  size: "regular",
+                  onHide() {var categoryindex = "";     // Redeclare and store looped GO category locally in function that will be called later, otherwise will only use the final for-loop index value
+                  if (datatype == "GO") {categoryindex = categories[h]}
+                  document.getElementById("extra" + datatype + categoryindex).innerHTML = "Show"},  
+                  
+                  onShow() {var categoryindex = "";
+                  if (datatype == "GO") {categoryindex = categories[h];} 
+                  document.getElementById("extra" + datatype + categoryindex).innerHTML = "Hide"}
+            })
+        }
+    
+        document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
+
+        var querytermlength = queryNode.data(datatype).length  // Get query OMIM/Reactome id list length
+        if (datatype == "GO") {  // Calculate query GO dictionary length
+            var allGOterms = 0
+            for (let i=0; i<Object.values(queryNode.data(datatype)).length; i++) {
+                allGOterms += Object.values(queryNode.data(datatype))[i].length
+            }
+            querytermlength = allGOterms
+        }
+             if (querytermlength == 0) {
+                  document.getElementById("loading" + datatype).innerHTML += "<br>" +"<b>No " + datatype + " data" + " found for query.</b>"
+             } 
         else {
-            cy.nodes()[i].data("common"+ datatype + categoryindex, intersect)
-        }   
+            $("." + datatype + "check").prop('disabled', false)
+        }
     }
 }
-
-for (let h=0; h<categoryloop; h++) {
-    if (datatype == "GO") {categoryindex = categories[h]}
-    var div = document.getElementById('extracheckboxes' + datatype + categoryindex)	 // Adding extra individual term checkbox filters
-    var tablehtml = '<table border=1>'
-    for (let z=0; z<queryNode.data("common" + datatype + categoryindex).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query term 
-        var term = queryNode.data("common" + datatype + categoryindex)[z]
-		var string = term
-		if (datatype == "OMIM") {
-			var name = OMIMdatabase[term]									// Fetch query OMIM ID names from portable database to use on the buttons
-			if (!OMIMdatabase[term]) {name = ""}
-			string = "(OMIM: " + term + ")  " + name 
-		}
-		
-		tablehtml += `
-		<tr>
-		<td>` + string + `</td>
-		<td class="button_cell"><input class="` + datatype + `check" id="` + datatype + `check" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.reject` + datatype + categoryindex + z + `');"/></td>
-		</tr>
-		`    
-		
-		for (let i=1; i<cy.nodes().length; i++){                                            
-			var targetdata = cy.nodes()[i].data("common" + datatype + categoryindex)                       // Loop within previous loop for adding individual query term reject classes to each node
-			if (targetdata.indexOf(term) == -1) {
-				cy.nodes()[i].addClass("reject" + datatype + categoryindex + z)			
-			}
-		}
-    }
-    tablehtml += '</table>'
-    div.innerHTML += tablehtml
-}
-
-if (datatype == "OMIM") {
-	for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
-		let node = cy.nodes()[i]
-		if (!node.data("commonOMIM").includes("none")) {
-			for (let x=0; x<node.data("commonOMIM").length; x++) {
-				if (OMIMdatabase[node.data("commonOMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
-					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  " + OMIMdatabase[node.data("commonOMIM")[x]]
-				}
-				else {
-					node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
-				}
-			}
-		}
-	}
-}
-
-for (let h=0; h<categoryloop; h++) {  // Make tippy popups for tables with extra individual query term checkboxes
-    if (datatype == "GO") {categoryindex = categories[h]}
-    const button = document.getElementById("extra" + datatype + categoryindex)
-    const template = document.getElementById("extracheckboxes" + datatype + categoryindex)
-    const container = document.createElement('div')
-    container.id = "morecheck" + datatype + categoryindex
-    container.style.cssText = "overflow: auto; max-height:50vw;"
-    container.appendChild(document.importNode(template.content, true))
-    tippy(button, {
-          content: container,
-          trigger: "click",
-          theme: "light",
-          placement: "right-end",
-          distance: 10,
-          duration: [100, 0],
-          allowHTML: true,
-          interactive: "true",
-          sticky: true,
-          arrow: true,
-          size: "regular",
-          onHide() {var categoryindex = "";     // Redeclare and store looped GO category locally in function that will be called later, otherwise will only use the final for-loop index value
-          if (datatype == "GO") {categoryindex = categories[h]}
-          document.getElementById("extra" + datatype + categoryindex).innerHTML = "Show"},  
-          
-          onShow() {var categoryindex = "";
-          if (datatype == "GO") {categoryindex = categories[h];} 
-          document.getElementById("extra" + datatype + categoryindex).innerHTML = "Hide"}
-    })
-}
-
-document.getElementById("loading" + datatype).innerHTML = "Loading... complete.";
-$("." + datatype + "check").prop('disabled', false)
+classmaker(datatype);
 console.timeEnd(datatype)
 }
 
@@ -556,6 +554,7 @@ var contextMenu = cy.contextMenus({
           let elements = await fetchAll(offspring, [], target.id());
           console.timeEnd("network expansion");
           cy.nodes().lock()
+          // add visibility 0 for elements added
           cy.add(elements)
           cy.layout({
             name: 'cose',
@@ -564,15 +563,44 @@ var contextMenu = cy.contextMenus({
             nodeDimensionsIncludeLabels: true,
             nodeRepulsion: 200000
           }).run()
-          cy.nodes().unlock();
-          postProcessing();
+          cy.nodes().unlock();         
           disableCheckBoxes();
+          postProcessing();
           target.style({'background-image': null});
           fetchAfter("OMIM", "IDs", true);
           fetchAfter("Reactome", "IDs", true);
           fetchAfter("GO", "terms", true);
         }
       }, 
+      hasTrailingDivider: true
+    },
+    {
+      id: "SetQuery",
+      content: "Set protein as query and update filters",
+      selector: "node",
+      onClickFunction: function (event) {
+      var target = event.target || event.cyTarget;
+      queryNode.style({"background-color": "blue"})
+      queryNode = cy.nodes("#"+target.id())
+      $("input:checkbox").each(function() {
+        if(this.checked) {
+            this.click()
+        }
+      });
+      disableCheckBoxes();
+      postProcessing();
+      for (let i=0; i<cy.nodes().length; i++) {
+          cy.nodes()[i].classes().forEach(function(nodeclass){
+              if (nodeclass.includes("reject")){
+                  cy.nodes()[i].removeClass(nodeclass)
+              }
+          })
+      }
+      classmaker("OMIM", queryreset=true)
+      classmaker("Reactome", queryreset=true)
+      classmaker("GO", queryreset=true)
+      document.getElementById("queryindicator").innerHTML = "Query: " + target.id()
+    },
       hasTrailingDivider: true
     },
     {

@@ -108,8 +108,12 @@
     <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
     <option value = "method1">Hide filtered nodes but keep orphans</option>
     <option value = "method2">Remove filtered nodes and orphans</option>
-    </select><br><br>
-
+    </select>
+    <br>
+    <br>
+    <div id="queryindicator"></div>
+    <br>
+    <br>
     <table id="checkboxes" border=1 align="left">
     <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
@@ -118,7 +122,7 @@
       <td class="button_cell"><input id="organismcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
     </tr>
     <tr class="blank_row"></tr>
-    <tr bgcolor="#d1d1d1"><td colspan=2>GO terms shared with query:</td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2>Gene Ontology (GO) terms shared with query:</td></tr>
     <tr>
       <td>Any cellular component</td>
       <td class="button_cell"><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectGOC');"/></td>
