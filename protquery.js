@@ -883,7 +883,7 @@ function expand(node, force=false, click=true){
   controlDict[node.id()] = [];
   let collapsedSources = cy.nodes(".collapsed");
 
-  for (let i=collapsedSources.length-1; i>=0; i--){
+  for (let i=collapsedSources.length-1; i>-1; i--){
     if (collapsedSources[i].outgoers().edges(':simple:hidden').length == 0) {
       controlDict[node.id()].push(collapsedSources[i]);
       collapsedSources[i].removeClass("collapsed");
