@@ -191,7 +191,7 @@ console.timeEnd("layout");
 
 // Define and indicate query node 
 queryNode = cy.nodes("#"+iquery);
-document.getElementById("queryindicator").innerHTML = "Query: " + iquery
+document.getElementById("queryIndicator").innerHTML = "Query: " + queryNode.data("name");
 
 // Style loop edges for self-interactions
 cy.edges(":loop").style("loop-direction", -90);
@@ -600,7 +600,7 @@ var contextMenu = cy.contextMenus({
       classmaker("OMIM", queryreset=true)
       classmaker("Reactome", queryreset=true)
       classmaker("GO", queryreset=true)
-      document.getElementById("queryindicator").innerHTML = "Query: " + target.id()
+      document.getElementById("queryIndicator").innerHTML = "Query: "+target.data("name");
     },
       hasTrailingDivider: true
     },
