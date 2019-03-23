@@ -36,7 +36,11 @@
   }
   #legend{
     text-align: left;
-    font-size: calc(16px + 0.5vw);
+    font-size: calc(14px + 0.5vw);
+  }
+  p {
+     margin: 10px;
+     padding: 0px;
   }
   #settings {
     position: absolute;
@@ -83,12 +87,21 @@
         placement: "bottom",
         content: `
           <div id="legend">
+          <p><u>Legend</u></p>
           <p><img src="icons/cred.png" class="node_img"> Query protein</p>
-          <p><img src="icons/cgreen.png" class="node_img"> Protein with known structure/model</p>
-          <p><img src="icons/gedge.png" height = "16px" width="40px"> Edge with modelled structure</p>
-          <p><img src="icons/cblue.png" class="node_img"> Protein without known structure/model</p>
+          <p><img src="icons/cblue.png" class="node_img"> Protein without known structure or model</p>
+          <p><img src="icons/cgreen.png" class="node_img"> Protein with known structure or Phyre model</p>
+          <p><img src="icons/gedge.png" height = "16px" width="40px"> Interaction with GWIDD model</p>
           <p><img src="icons/gborder.png" class="node_img"> / <img src="icons/bborder.png" class="node_img"> Expandable on click</p>
-          <p><u>Do not show me this box on load:</u> <input type="CHECKBOX" id="infoCheck" onClick="document.cookie = "showInfo = true";"></p>
+          <p>Lowercase labels: non-human proteins</p>
+          <p><u>Network features</u></p>
+          <p>Left-click: Expand or collapse node</p>
+          <p>Right-click: Show further node-specific options</p>
+          <p>Click and hold: Expand node and its successors</p>
+          <p>Alt-click and drag: Move node and its successors</p>
+          <p><i>Note: non-human proteins have no associated info</i></p>
+          <p><b>Do not show me this box on load:</b> <input type="CHECKBOX" id="infoCheck" onClick="document.cookie = "showInfo = true";"></p>
+          
           </div>
         `,
         allowHTML: true,
