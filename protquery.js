@@ -83,7 +83,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 
     if(!interactors[i].organismDiffers) {
       proteins[id].targets.push(interactor);
-      if (!ids.concat(offspring).concat(flagged).includes(interactor)) {
+      if (!ids.concat(query).concat(offspring).concat(flagged).includes(interactor)) {
         offspring.push(interactor);
       }
     }
@@ -117,11 +117,11 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 if (!source) {
   if (ids.length + offspring.length >= 80 || !offspring.length) {
     for (let i=0; i<ids.length; i++) {
-      let source = proteins[ids[i]];
-      let targets = source.targets;
+      let protein = proteins[ids[i]];
+      let targets = protein.targets;
 
       for (let j=0; j<targets.length; j++) {
-        if (proteins[targets[j]] && !source.sources.includes(targets[j])) {
+        if (proteins[targets[j]] && !protein.sources.includes(targets[j])) {
           proteins[targets[j]].sources.push(ids[i]);
           collection.push({data: {source: ids[i], target: targets[j]}});
         }
