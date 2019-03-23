@@ -788,9 +788,33 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     checkEvents2.push(optionClass);
     }
     var o = cy.$(optionClass);
-    var filtered = o.merge(o.successors()).merge(o.incomers().edges());
-    cy.scratch("removed").merge(filtered);
-    filtered.remove();
+    cy.scratch("removed").merge(o)
+    cy.scratch("removed").merge(o.connectedEdges())
+    for (let i=0; i<o.length; i++) {
+        if (o[i].tip && o[i].tip.state.isShown) {
+            o[i].tip.hide()
+            o[i].addClass("hiddentip" + optionClass.substr(1))
+        }
+    }
+    o.remove()
+    var filtered = cy.collection();
+    for (let i=0; i<cy.nodes().difference(queryNode).length; i++) {
+        var path = cy.elements().aStar({
+            root: cy.nodes().difference(queryNode)[i],
+            goal: queryNode,
+            directed: false
+        })
+        if (!path.found) {
+            filtered.merge(cy.nodes().difference(queryNode)[i])
+            filtered.merge(cy.nodes().difference(queryNode)[i].connectedEdges())
+            if (cy.nodes().difference(queryNode)[i].tip && cy.nodes().difference(queryNode)[i].tip.state.isShown) {
+                cy.nodes().difference(queryNode)[i].tip.hide()
+                cy.nodes().difference(queryNode)[i].addClass("hiddentip" + optionClass.substr(1))
+            }
+        }
+    }
+    cy.scratch("removed").merge(filtered)
+    filtered.remove()
     var collapsees = cy.nodes(".collapsed");
     for (let i=0; i<collapsees.length; i++) {
       if (collapsees[i].outdegree(false) == 0) {
@@ -805,6 +829,10 @@ function OptionfilterV2(checkBoxID, optionClass, multiFilter=false) {
     var removed = cy.scratch("removed");
     cy.scratch("removed").restore();
     cy.scratch("removed", cy.collection());
+    for (let i=0; i<cy.nodes(".hiddentip" + optionClass.substr(1)).length; i++) {
+        cy.nodes(".hiddentip" + optionClass.substr(1))[i].tip.show()
+    }
+    cy.nodes(".hiddentip" + optionClass.substr(1)).removeClass("hiddentip" + optionClass.substr(1))
     var uncollapsees = cy.nodes(".uncollapsed");
     for (let i=0; i<uncollapsees.length; i++) {
       collapse(uncollapsees[i]);
@@ -884,7 +912,7 @@ function expand(node, force=false, click=true){
   let collapsedSources = cy.nodes(".collapsed");
 
   for (let i=collapsedSources.length-1; i>-1; i--){
-    if (collapsedSources[i].outgoers().edges(':simple:hidden').length == 0) {
+    if (collapsedSources[i].connectedEdges(':simple:hidden').length == 0) {
       controlDict[node.id()].push(collapsedSources[i]);
       collapsedSources[i].removeClass("collapsed");
       collapsedSources[i].style("border-width", 0);
