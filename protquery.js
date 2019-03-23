@@ -940,7 +940,7 @@ function toggleNodeTip(node, show) {
   }
 }
 
-function networkPNG(simple) {
+function networkPNG(button, simple) {
   if (simple) {
     var styles = []
     for (let i=0; i<cy.elements().length; i++){
@@ -956,13 +956,11 @@ function networkPNG(simple) {
       "opacity": 1
     });
   }
-  var image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
-  var a = document.createElement('a');
-  a.href = image;
-  a.setAttribute("download",  "network.png");
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+
+  let image = cy.png(scale = 5, maxWidth=1000, maxHeight=1000, full=true);
+  button.href = image;
+  button.setAttribute("download",  "network.png");
+
   if (simple) {
     for (let i=0; i<cy.elements().length; i++) {
       cy.elements()[i].style(styles[i])
