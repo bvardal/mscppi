@@ -1,5 +1,6 @@
 // Declare global variables that need to be reused
 var ids, nonHumans, proteins, collection;
+var initLength = 0;
 var flagged = [];
 const categories = ["F", "P", "C"];
 var classmaker;
@@ -10,6 +11,7 @@ const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
 
 async function fetchAll(query, saved=[], source=null) {
 // Offspring and new edges need to be reset with each iteration
+
 collection = collection.concat(saved);
 saved = [];
 var offspring = [];  // New nodes that will be queried in next iteration
@@ -120,33 +122,28 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   }
 })));
 
-if (!source) {
-  if (ids.length + offspring.length >= 80 || !offspring.length) {
-    for (let i=0; i<ids.length; i++) {
-      let protein = proteins[ids[i]];
-      let targets = protein.targets;
+if (ids.length + offspring.length >= 80 || !offspring.length || source) {
+  for (let i=initLength; i<ids.length; i++) {
+    let protein = proteins[ids[i]];
+    let targets = protein.targets;
 
-      for (let j=0; j<targets.length; j++) {
-        if (proteins[targets[j]] && !protein.sources.includes(targets[j])) {
-          proteins[targets[j]].sources.push(ids[i]);
-          collection.push({data: {source: ids[i], target: targets[j]}});
-        }
+    if (source) {
+      protein.sources.push(source);
+      collection.push({data: {source: source, target: ids[i]}});
+    }
+
+    for (let j=0; j<targets.length; j++) {
+      if (proteins[targets[j]] && !protein.sources.includes(targets[j])) {
+        proteins[targets[j]].sources.push(ids[i]);
+        collection.push({data: {source: ids[i], target: targets[j]}});
       }
     }
-    return collection;
   }
-  else {
-    return await fetchAll(offspring, saved);
-  }
-}
-
-else {
-  for (let i=0; i<query.length; i++) {
-    if(proteins[query[i]]) {
-      collection.push({data: {source: source, target: query[i]}});
-    }
-  }
+  initLength = ids.length;
   return collection;
+}
+else {
+  return await fetchAll(offspring, saved);
 }
 }
 
@@ -543,10 +540,10 @@ var contextMenu = cy.contextMenus({
       selector: "node[^organismDiffers]",
       onClickFunction: async function (event) {
         var target = event.target || event.cyTarget;
-        contextMenu.disableMenuItem("Expand")
-        contextMenu.disableMenuItem("SetQuery")
         let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
         if (offspring.length) {
+          contextMenu.disableMenuItem("Expand")
+          contextMenu.disableMenuItem("SetQuery")
           target.style({
             "background-image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Maya_3.svg/480px-Maya_3.svg.png", 
             "background-fit": "contain"
