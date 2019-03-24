@@ -169,8 +169,8 @@ cy = cytoscape({
     fit: true,
     padding: 25,
     nodeDimensionsIncludeLabels: true,
-    nodeRepulsion: 10000,
-    nodeOverlap: 10000,
+    nodeRepulsion: 1e6,
+    nodeOverlap: 1e6,
   },
   style: [
     {
@@ -546,8 +546,8 @@ var contextMenu = cy.contextMenus({
         var target = event.target || event.cyTarget;
         let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
         if (offspring.length) {
-          let warning = `Warning, this will add ${offspring.length} new nodes to the network.`
           if (offspring.length > 10) {
+            let warning = `Warning: This expansion will add ${offspring.length} new nodes to the network. Proceed?`
             if (!confirm(warning)) {
               return 0;
             }
@@ -570,8 +570,8 @@ var contextMenu = cy.contextMenus({
             fit: false,
             padding: 25,
             nodeDimensionsIncludeLabels: true,
-            nodeRepulsion: 10000,
-            nodeOverlap: 10000,
+            nodeRepulsion: 1e6,
+            nodeOverlap: 1e6,
           }).run()
           cy.nodes().unlock();         
           disableCheckBoxes();
