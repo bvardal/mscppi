@@ -30,6 +30,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   var fullName = data.recommendedName;
   var structures = [], phyreModels = [], ignoreGwidd = [], targets = [];
   var gwidd = {};
+  var newnode = false
   
   // Populate structures, phyreModels, and gwidd
   for (let i=0; i<data.experimentalStructures.length; i++) {
@@ -57,7 +58,11 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
       ignoreGwidd.push(correctId)
     }
   }
-
+  
+  if (source) {
+    newnode = true
+  }
+        
   // Generate and push node data
   collection.push({data: {
     id: id, 
@@ -68,6 +73,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
     gwidd: gwidd,
     structures: structures,
     phyreModels: phyreModels,
+    newnode: newnode
   }});
 
   // Retrieve interactors
@@ -412,13 +418,6 @@ console.timeEnd(datatype)
 }
 
 
-
-fetchAfter("OMIM", "IDs", false)
-fetchAfter("Reactome", "IDs", false)
-fetchAfter("GO", "terms", false)
-
-
-
 // Define on-click, on-mouseover etc. events
 cy.on("tap", "node", function(){
   if (this.hasClass("tempExpand") || this.hasClass("forceExpand")) {
@@ -526,7 +525,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "link",
       content: "Link to PhyreRisk page",
-      selector: "node",
+    selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         var target = event.target || event.cyTarget;
         if (!target.data("organismDiffers")) {
@@ -541,9 +540,11 @@ var contextMenu = cy.contextMenus({
     {
       id: "Expand",
       content: "Expand network around node",
-      selector: "node",
+      selector: "node[^organismDiffers]",
       onClickFunction: async function (event) {
         var target = event.target || event.cyTarget;
+        contextMenu.disableMenuItem("Expand")
+        contextMenu.disableMenuItem("SetQuery")
         let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
         if (offspring.length) {
           target.style({
@@ -568,9 +569,18 @@ var contextMenu = cy.contextMenus({
           disableCheckBoxes();
           postProcessing();
           target.style({'background-image': null});
-          fetchAfter("OMIM", "IDs", true);
-          fetchAfter("Reactome", "IDs", true);
-          fetchAfter("GO", "terms", true);
+          fetchAfter("OMIM", "IDs", extranodes=true);
+          fetchAfter("Reactome", "IDs", extranodes=true);
+          await fetchAfter("GO", "terms", extranodes=true);
+          cy.$("[?newnode]").data("newnode", false);
+          $("input:checkbox").each(function() {
+            if(this.checked) {
+                this.click()
+                this.click()
+            }
+          });
+          contextMenu.enableMenuItem("Expand")
+          contextMenu.enableMenuItem("SetQuery")
         }
       }, 
       hasTrailingDivider: true
@@ -578,7 +588,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "SetQuery",
       content: "Set protein as query and update filters",
-      selector: "node",
+      selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
       var target = event.target || event.cyTarget;
       queryNode.style({"background-color": "blue"})
@@ -607,7 +617,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "GOshared",
       content: "Show Gene Ontology features shared with query",
-      selector: "node",
+      selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
@@ -640,7 +650,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "Reactomeshared",
       content: "Show reactome pathways shared with query",
-      selector: "node",
+      selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
@@ -670,7 +680,7 @@ var contextMenu = cy.contextMenus({
     {
       id: "Diseaseinvolement",
       content: "Show disease involvement shared with query",
-      selector: "node",
+      selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
@@ -714,6 +724,16 @@ var contextMenu = cy.contextMenus({
     }
   ]
 });
+
+contextMenu.disableMenuItem("Expand")
+contextMenu.disableMenuItem("SetQuery")
+
+await fetchAfter("OMIM", "IDs", false)
+await fetchAfter("Reactome", "IDs", false)
+await fetchAfter("GO", "terms", false)
+
+contextMenu.enableMenuItem("Expand")
+contextMenu.enableMenuItem("SetQuery")
 }
 
 // Display filtering method based on drop-down menu choice
