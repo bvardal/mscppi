@@ -169,22 +169,20 @@ cy = cytoscape({
     fit: true,
     padding: 25,
     nodeDimensionsIncludeLabels: true,
-    nodeRepulsion: 10000000,
-    nodeOverlap: 100000000000000000000,
+    nodeRepulsion: 10000,
+    nodeOverlap: 10000,
   },
   style: [
     {
       selector: "node",
       style: {
       "background-color": "blue",
-      "text-wrap": "wrap",
       label: "data(name)",
       width: 40, height: 40,
       "font-size": 18, "font-family": "Helvetica",
-      "min-zoomed-font-size": 8,
       "border-color": "orange",
-      "border-width": 0,
-      "border-style": "double"
+      "border-style": "double",
+      "border-width": 0
       }
     },
     {
@@ -548,6 +546,12 @@ var contextMenu = cy.contextMenus({
         var target = event.target || event.cyTarget;
         let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
         if (offspring.length) {
+          let warning = `Warning, this will add ${offspring.length} new nodes to the network.`
+          if (offspring.length > 10) {
+            if (!confirm(warning)) {
+              return 0;
+            }
+          }
           contextMenu.disableMenuItem("Expand")
           contextMenu.disableMenuItem("SetQuery")
           target.style({
