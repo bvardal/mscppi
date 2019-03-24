@@ -1,6 +1,5 @@
 // Declare global variables that need to be reused
-var ids, nonHumans, proteins, collection;
-var initLength = 0;
+var ids, nonHumans, proteins, collection, initLength;
 var flagged = [];
 const categories = ["F", "P", "C"];
 var classmaker;
@@ -135,7 +134,12 @@ if (ids.length + offspring.length >= 80 || !offspring.length || source) {
     for (let j=0; j<targets.length; j++) {
       if (proteins[targets[j]] && !protein.sources.includes(targets[j])) {
         proteins[targets[j]].sources.push(ids[i]);
-        collection.push({data: {source: ids[i], target: targets[j]}});
+        if (source) {
+          collection.push({data: {source: targets[j], target: ids[i]}});
+        }
+        else {
+          collection.push({data: {source: ids[i], target: targets[j]}});
+        }
       }
     }
   }
@@ -150,6 +154,7 @@ else {
 async function BuildNetwork() {
 ids = [], nonHumans = [], collection= [];
 proteins = {};
+initLength = 0;
 iquery = document.getElementById("query").value.replace(/-1$/, "");
 console.time("fetch");
 let elements = await fetchAll([iquery]);
@@ -561,8 +566,8 @@ var contextMenu = cy.contextMenus({
             fit: false,
             padding: 25,
             nodeDimensionsIncludeLabels: true,
-            nodeRepulsion: 10000000,
-            nodeOverlap: 100000000000000000000,
+            nodeRepulsion: 10000,
+            nodeOverlap: 10000,
           }).run()
           cy.nodes().unlock();         
           disableCheckBoxes();
