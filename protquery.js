@@ -164,7 +164,8 @@ cy = cytoscape({
     fit: true,
     padding: 25,
     nodeDimensionsIncludeLabels: true,
-    nodeRepulsion: 200000
+    nodeRepulsion: 10000000,
+    nodeOverlap: 100000000000000000000,
   },
   style: [
     {
@@ -560,7 +561,8 @@ var contextMenu = cy.contextMenus({
             fit: false,
             padding: 25,
             nodeDimensionsIncludeLabels: true,
-            nodeRepulsion: 200000
+            nodeRepulsion: 10000000,
+            nodeOverlap: 100000000000000000000,
           }).run()
           cy.nodes().unlock();         
           disableCheckBoxes();
@@ -725,8 +727,8 @@ var contextMenu = cy.contextMenus({
 contextMenu.disableMenuItem("Expand")
 contextMenu.disableMenuItem("SetQuery")
 
-await fetchAfter("OMIM", "IDs", false)
-await fetchAfter("Reactome", "IDs", false)
+fetchAfter("OMIM", "IDs", false)
+fetchAfter("Reactome", "IDs", false)
 await fetchAfter("GO", "terms", false)
 
 contextMenu.enableMenuItem("Expand")
