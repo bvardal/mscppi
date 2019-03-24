@@ -1,5 +1,5 @@
 // Declare global variables that need to be reused
-var ids, nonHumans, proteins, collection, initLength;
+var iquery, ids, nonHumans, proteins, collection, initLength;
 var flagged = [];
 const categories = ["F", "P", "C"];
 var classmaker;
@@ -121,7 +121,8 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   }
 })));
 
-if (ids.length + offspring.length >= 80 || !offspring.length || source) {
+if ((ids.length + offspring.length >= 100 || !offspring.length || source)
+    && iquery != query[0]) {
   for (let i=initLength; i<ids.length; i++) {
     let protein = proteins[ids[i]];
     let targets = protein.targets;
