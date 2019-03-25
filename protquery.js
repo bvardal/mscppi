@@ -178,7 +178,7 @@ cy = cytoscape({
       selector: "node",
       style: {
       "background-color": "blue",
-      label: "data(name)",
+      label: "data(name)", 
       width: 40, height: 40,
       "font-size": 18, "font-family": "Helvetica",
       "border-color": "orange",
@@ -294,7 +294,24 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
             categoryloop = 3        // Force post-fetch functions to loop over all 3 lists of the GO dictionary
         }
 
-
+        if (datatype == "OMIM") {
+            for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
+                let node = cy.nodes()[i]
+                if (node.data("OMIM").length) {
+                    console.log(node.data("OMIM"))
+                    for (let x=0; x<node.data("OMIM").length; x++) {
+                        if (OMIMdatabase[node.data("OMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
+                            node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  " + OMIMdatabase[node.data("OMIM")[x]]
+                        }
+                        else {
+                            node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
+                        }
+                    }
+                }
+            }
+        }
+        
+        
         for (let h=0; h<categoryloop; h++) {       // Loop through GO categories or just once if not fetching GO                                        
             for (let i=0; i<cy.nodes().length; i++){
                 var querydata = queryNode.data(datatype)
@@ -324,11 +341,6 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
             for (let z=0; z<queryNode.data("common" + datatype + categoryindex).length; z++) {                 // Loop for adding checkboxes to HTML to filter for each query term 
                 var term = queryNode.data("common" + datatype + categoryindex)[z]
                 var string = term
-                if (datatype == "OMIM") {
-                    var name = OMIMdatabase[term]									// Fetch query OMIM ID names from portable database to use on the buttons
-                    if (!OMIMdatabase[term]) {name = ""}
-                    string = "(OMIM: " + term + ")  " + name 
-                }
                 
                 tablehtml += `
                 <tr>
@@ -348,21 +360,6 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
             div.innerHTML += tablehtml
         }
 
-        if (datatype == "OMIM") {
-            for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
-                let node = cy.nodes()[i]
-                if (!node.data("commonOMIM").includes("none")) {
-                    for (let x=0; x<node.data("commonOMIM").length; x++) {
-                        if (OMIMdatabase[node.data("commonOMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
-                            node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  " + OMIMdatabase[node.data("commonOMIM")[x]]
-                        }
-                        else {
-                            node.data("commonOMIM")[x] = "(OMIM: " + node.data("commonOMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
-                        }
-                    }
-                }
-            }
-        }
 
         for (let h=0; h<categoryloop; h++) {  // Make tippy popups for tables with extra individual query term checkboxes
             if (datatype == "GO") {categoryindex = categories[h]}
@@ -625,17 +622,31 @@ var contextMenu = cy.contextMenus({
     },
     {
       id: "GOshared",
-      content: "Show Gene Ontology features shared with query",
+      content: "Show Gene Ontology terms and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
+                var markedGO = {"F":[], "P":[], "C":[]}
+                for (let h=0; h<categories.length; h++) {
+                    markedGO[categories[h]] = [].concat(target.data("GO")[categories[h]])
+                    if (!markedGO[categories[h]].length) {
+                        markedGO[categories[h]].push("none")
+                    }
+                    else {
+                        for (let i=0; i<markedGO[categories[h]].length; i++) {
+                            if (target.data("commonGO" + categories[h]).includes(markedGO[categories[h]][i])) {
+                                markedGO[categories[h]][i] = "<mark>" + markedGO[categories[h]][i] + "</mark>"
+                            }
+                        }
+                    }
+                }
                 target.tipGO =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' + 
-                                ["<b><font size='3em'>Shared cellular component:</font></b>" +"<br>" + target.data("commonGOC").join("<br>"), // Use <br> because tippy content can't parse \n characters as newline
-                                 "<b><font size='3em'>Shared biological process:</font></b>" +"<br>" + target.data("commonGOP").join("<br>"),
-                                 "<b><font size='3em'>Shared molecular function:</font></b>" + "<br>" + target.data("commonGOF").join("<br>")]
+                ["<b><font size='3em'>Cellular component:</font></b>" +"<br>" + markedGO["C"].join("<br>"), // Use <br> because tippy content can't parse \n characters as newline
+                                 "<b><font size='3em'>Biological process:</font></b>" +"<br>" + markedGO["P"].join("<br>"),
+                                 "<b><font size='3em'>Molecular function:</font></b>" + "<br>" + markedGO["F"].join("<br>")]
                                  .join("<br><br>")
                                  + '</div>',
                   theme: "light",
@@ -658,15 +669,26 @@ var contextMenu = cy.contextMenus({
     },
     {
       id: "Reactomeshared",
-      content: "Show reactome pathways shared with query",
+      content: "Show reactome pathways and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
+                var markedReactome = [].concat(target.data("Reactome"))
+                if (!markedReactome.length) {
+                    markedReactome.push("none")
+                }
+                else {
+                    for (let i=0; i<markedReactome.length; i++) {
+                        if (target.data("commonReactome").includes(markedReactome[i])) {
+                            markedReactome[i] = "<mark>" + markedReactome[i] + "</mark>"
+                        }
+                    }
+                }
                 target.tipReactome =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' +
-                  "<b><font size='3em'>Shared reactome pathways:</font></b>" + '<br>' + target.data("commonReactome").join('<br>')
+                  "<b><font size='3em'>Reactome pathways:</font></b>" + '<br>' + markedReactome.join('<br>')
                   + '</div>',
                   theme: "light",
                   placement: "right",
@@ -688,15 +710,26 @@ var contextMenu = cy.contextMenus({
     },
     {
       id: "Diseaseinvolement",
-      content: "Show disease involvement shared with query",
+      content: "Show OMIM diseases and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
         if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingOMIM").innerHTML == "Loading... complete." ) {
+                var markedOMIM = [].concat(target.data("OMIM"))
+                if (!markedOMIM.length) {
+                    markedOMIM.push("none")
+                }
+                else {
+                    for (let i=0; i<markedOMIM.length; i++) {
+                        if (target.data("commonOMIM").includes(markedOMIM[i])) {
+                            markedOMIM[i] = "<mark>" + markedOMIM[i] + "</mark>"
+                        }
+                    }
+                }
                 target.tipOMIM =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' +
-                  "<b><font size='3em'>Shared OMIM disease involvement:</font></b>" + "<br>" + target.data("commonOMIM").join('<br>')
+                  "<b><font size='3em'>OMIM disease involvement:</font></b>" + "<br>" + markedOMIM.join('<br>')
                   + '</div>',
                   theme: "light",
                   placement: "right",
