@@ -298,7 +298,6 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
             for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
                 let node = cy.nodes()[i]
                 if (node.data("OMIM").length) {
-                    console.log(node.data("OMIM"))
                     for (let x=0; x<node.data("OMIM").length; x++) {
                         if (OMIMdatabase[node.data("OMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
                             node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  " + OMIMdatabase[node.data("OMIM")[x]]
@@ -643,7 +642,7 @@ var contextMenu = cy.contextMenus({
                     }
                 }
                 target.tipGO =  tippy(target.popperRef(), {
-                  content: '<div style="overflow: auto; max-height:50vw;">' + 
+                  content: '<div style="overflow: auto; max-height:"50%";">' + 
                 ["<b><font size='3em'>Cellular component:</font></b>" +"<br>" + markedGO["C"].join("<br>"), // Use <br> because tippy content can't parse \n characters as newline
                                  "<b><font size='3em'>Biological process:</font></b>" +"<br>" + markedGO["P"].join("<br>"),
                                  "<b><font size='3em'>Molecular function:</font></b>" + "<br>" + markedGO["F"].join("<br>")]
