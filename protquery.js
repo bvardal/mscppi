@@ -121,7 +121,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   }
 })));
 
-if ((ids.length + offspring.length >= 100 || !offspring.length || source)
+if ((ids.length + offspring.length >= 500 || !offspring.length || source)
     && iquery != query[0]) {
   for (let i=initLength; i<ids.length; i++) {
     let protein = proteins[ids[i]];
@@ -171,7 +171,7 @@ cy = cytoscape({
     padding: 25,
     nodeDimensionsIncludeLabels: true,
     nodeRepulsion: 1e6,
-    nodeOverlap: 1e6,
+    nodeOverlap: 10,
   },
   style: [
     {
@@ -568,7 +568,7 @@ var contextMenu = cy.contextMenus({
             padding: 25,
             nodeDimensionsIncludeLabels: true,
             nodeRepulsion: 1e6,
-            nodeOverlap: 1e6,
+            nodeOverlap: 10,
           }).run()
           cy.nodes().unlock();         
           disableCheckBoxes();
