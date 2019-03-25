@@ -82,7 +82,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 
   for (let i=0; i<interactors.length; i++) {
     if (interactors[i].intactId1 == interactors[i].intactId2) {
-      collection.push({data: {source: id, target: id}});
+      proteins[id].targets.push(id);
       continue
     }
 
@@ -121,7 +121,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   }
 })));
 
-if ((ids.length + offspring.length >= 500 || !offspring.length || source)
+if ((ids.length + offspring.length >= 100 || !offspring.length || source)
     && iquery != query[0]) {
   for (let i=initLength; i<ids.length; i++) {
     let protein = proteins[ids[i]];
