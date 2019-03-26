@@ -114,6 +114,8 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 .catch(function(err) {
   // If error is encountered for initial query, submitted ID is likely invalid
   if (id == iquery) {
+    document.getElementById("cy").innerHTML = err+ "\nFailed on first query.";
+    console.timeEnd("fetch");
     throw(err+ "\nFailed on first query.");
   }
   else {
@@ -162,6 +164,7 @@ let elements = await fetchAll([iquery]);
 console.timeEnd("fetch");
 
 console.time("layout");
+document.getElementById("cy").innerHTML = "";
 cy = cytoscape({
   container: document.getElementById("cy"),
   elements: elements,
