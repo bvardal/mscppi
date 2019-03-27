@@ -1004,12 +1004,18 @@ function toggleNodeTip(node, show) {
   }
 }
 
+var styleTypes = ["background-color", "line-color", "border-width", "width", "opacity"];
+
 function networkPNG(button, simple) {
   if (simple) {
-    var styles = []
+    var styles = [];
     for (let i=0; i<cy.elements().length; i++){
-      var style = cy.elements()[i].style()
-      styles.push(style)
+      let element = cy.elements()[i];
+      let style = {};
+      for (let j=0; j<5; j++) {
+        style[styleTypes[j]] = element.style(styleTypes[j]);
+      }
+      styles.push(style);
     }
     cy.nodes(".collapsed").style("border-width", 0);        
     // Image requires that all nodes have an opacity of 1
