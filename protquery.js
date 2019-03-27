@@ -2,7 +2,7 @@
 var iquery, ids, nonHumans, proteins, collection, initLength;
 var flagged = [];
 const categories = ["F", "P", "C"];
-var classmaker;
+var classmaker, settings;
 var checkEvents = [];
 var checkEvents2 = [];
 const fetch_link = "http://phyreriskdev.bc.ic.ac.uk:9090/rest"
@@ -175,6 +175,7 @@ cy = cytoscape({
     nodeDimensionsIncludeLabels: true,
     nodeRepulsion: 1e6,
     nodeOverlap: 10,
+    gravity: 0
   },
   style: [
     {
@@ -204,11 +205,20 @@ console.timeEnd("layout");
 queryNode = cy.nodes("#"+iquery);
 document.getElementById("queryIndicator").innerHTML = "Query: " + queryNode.data("name");
 
-// Style loop edges for self-interactions
-cy.edges(":loop").style("loop-direction", -90);
-
 // Once network is rendered, display settings
-document.getElementById("settings").style.display = "block";
+document.getElementById("settings").style.display = "block"
+document.getElementById("showsettings").style.display = "block"
+settings = tippy(document.getElementById("showsettings"), {
+    content: document.getElementById("settings"),
+    theme: "light",
+    trigger: "manual",
+    interactive: true,
+    animateFill: false,
+    allowHTML: true,
+    hideOnClick: false
+})
+settings.show()
+
 
 function disableCheckBoxes() {
   $("input:checkbox").prop('disabled', true);
@@ -217,6 +227,9 @@ function disableCheckBoxes() {
 disableCheckBoxes();
 
 function postProcessing() {
+   // Style loop edges for self-interactions
+  cy.edges(":loop").style("loop-direction", -90);
+
   // Add classes for non-human nodes and nodes without 3D structures
   for (let i=0; i<cy.nodes().length; i++) {
     if (cy.nodes()[i].data("organismDiffers") == true) {
@@ -267,7 +280,7 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
         for (let i=0; i<sitejson.length; i++) {
             
             if (datatype == "OMIM") {
-               if (sitejson[i].properties.type == "phenotype"){
+               if (sitejson[i].properties.type.includes("phenotype")){
                var id = sitejson[i].id
                node.data(datatype).push(id);
                 }  
@@ -290,27 +303,29 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
 
  
  if (typeof classmaker !== "function") {
-    classmaker = function(datatype, queryreset){
+    classmaker = function(datatype, queryreset, nodeselector){
         var categoryloop = 1
         var categoryindex = ""
         if (datatype == "GO") {
             categoryloop = 3        // Force post-fetch functions to loop over all 3 lists of the GO dictionary
         }
-
-        if (datatype == "OMIM") {
-            for (let i=0; i<cy.nodes().length; i++) {										// Fetch OMIM ID disease names from loaded portable database
-                let node = cy.nodes()[i]
-                if (node.data("OMIM").length) {
-                    for (let x=0; x<node.data("OMIM").length; x++) {
-                        if (OMIMdatabase[node.data("OMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
-                            node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  " + OMIMdatabase[node.data("OMIM")[x]]
-                        }
-                        else {
-                            node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
+        
+        if (!queryreset) {
+            if (datatype == "OMIM") {
+                for (let i=0; i<cy.nodes(nodeselector).length; i++) {										// Fetch OMIM ID disease names from loaded portable database
+                    let node = cy.nodes(nodeselector)[i]
+                    if (node.data("OMIM").length) {
+                        for (let x=0; x<node.data("OMIM").length; x++) {
+                            if (OMIMdatabase[node.data("OMIM")[x]]){								// Not all OMIM IDs seem to be included in the 2GB file e.g. 604308
+                                node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  " + OMIMdatabase[node.data("OMIM")[x]]
+                            }
+                            else {
+                                node.data("OMIM")[x] = "(OMIM: " + node.data("OMIM")[x] +")  "  // Leave nameless OMIM IDs in but without name
+                            }
                         }
                     }
                 }
-            }
+            }    
         }
         
         
@@ -414,7 +429,7 @@ await Promise.all(cy.nodes('[^organismDiffers]' + nodeselector).map(node =>     
         }
     }
 }
-classmaker(datatype);
+classmaker(datatype, queryreset=false, nodeselector);
 console.timeEnd(datatype)
 }
 
@@ -513,6 +528,7 @@ cy.on("layoutstop", function(){
   console.timeEnd("autocollapse")
   cy.center(queryNode);
   cy.panBy({x:$(window).width()*-0.1});
+  cy.panBy({x:document.getElementById("settings").offsetWidth})
 });
 
 cy.on("resize", function() {
@@ -563,8 +579,8 @@ var contextMenu = cy.contextMenus({
           let elements = await fetchAll(offspring, [], target.id());
           console.timeEnd("network expansion");
           cy.nodes().lock()
-          // add visibility 0 for elements added
           cy.add(elements)
+          cy.$("[?newnode]").union(cy.$("[?newnode]").connectedEdges()).style("display", "none")
           cy.layout({
             name: 'cose',
             fit: false,
@@ -572,7 +588,9 @@ var contextMenu = cy.contextMenus({
             nodeDimensionsIncludeLabels: true,
             nodeRepulsion: 1e6,
             nodeOverlap: 10,
+            gravity: 0
           }).run()
+          cy.$("[?newnode]").union(cy.$("[?newnode]").connectedEdges()).style("display", "element")
           cy.nodes().unlock();         
           disableCheckBoxes();
           postProcessing();
@@ -589,6 +607,9 @@ var contextMenu = cy.contextMenus({
           });
           contextMenu.enableMenuItem("Expand")
           contextMenu.enableMenuItem("SetQuery")
+        }
+        else {
+            alert("This protein is already fully expanded!")
         }
       }, 
       hasTrailingDivider: true
@@ -627,7 +648,6 @@ var contextMenu = cy.contextMenus({
       content: "Show Gene Ontology terms and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
-        if (Object.values(queryNode.data("GO")).length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingGO").innerHTML == "Loading... complete." ) {
                 var markedGO = {"F":[], "P":[], "C":[]}
@@ -664,8 +684,6 @@ var contextMenu = cy.contextMenus({
                 target.tipGO.show()
                 }
              else {alert("GO terms still loading...")}
-        }
-        else {alert("No GO terms found for query")}
     },
       hasTrailingDivider: true
     },
@@ -674,7 +692,6 @@ var contextMenu = cy.contextMenus({
       content: "Show reactome pathways and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
-        if (queryNode.data("Reactome").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingReactome").innerHTML == "Loading... complete." ) {
                 var markedReactome = [].concat(target.data("Reactome"))
@@ -705,8 +722,6 @@ var contextMenu = cy.contextMenus({
                 target.tipReactome.show()
                 }
              else {alert("Reactome IDs still loading...")}
-        }
-        else {alert("No Reactome IDs found for query")}
     },
       hasTrailingDivider: true
     },
@@ -715,7 +730,6 @@ var contextMenu = cy.contextMenus({
       content: "Show OMIM diseases and highlight those shared with query",
       selector: "node[^organismDiffers]",
       onClickFunction: function (event) {
-        if (queryNode.data("OMIM").length != 0) {
             var target = event.target || event.cyTarget;
             if (document.getElementById("loadingOMIM").innerHTML == "Loading... complete." ) {
                 var markedOMIM = [].concat(target.data("OMIM"))
@@ -746,8 +760,6 @@ var contextMenu = cy.contextMenus({
                 target.tipOMIM.show()
                 }
             else {alert("OMIM IDs still loading...")}    
-        }
-        else {alert("No OMIM IDs found for query")}
     },
       hasTrailingDivider: true
     },
@@ -779,6 +791,19 @@ await fetchAfter("GO", "terms", false)
 contextMenu.enableMenuItem("Expand")
 contextMenu.enableMenuItem("SetQuery")
 }
+
+// Show or Hide filtering options table on click
+function minimiseSettings() {
+    if (settings.state.isShown) {
+        settings.hide()
+        $(".settingsimg").replaceWith('<img src="icons/angle_double_up.png" class="settingsimg">')
+    }
+    else {
+       settings.show()
+       $(".settingsimg").replaceWith('<img src="icons/angle_double_down.png" class="settingsimg">')
+    }
+}
+
 
 // Display filtering method based on drop-down menu choice
 

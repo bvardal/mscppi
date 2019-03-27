@@ -19,9 +19,8 @@
   #cy {
     position: fixed;
     top: 8%;
-    left: 25%;
     height: 92%;
-    width: 75%;
+    width: 100%;
   }
   img {
     vertical-align: middle;
@@ -43,14 +42,20 @@
      padding: 0px;
   }
   #settings {
-    position: absolute;
     display: none;
-    top: 0px;
-    float: left;
-    padding: 10px;
-    font-size: 1.25vw;
   }
-  input, select, option {
+  #showsettings {
+  all: unset;  
+  display: none;
+  position: fixed;
+  top: 30px;
+  cursor: pointer;
+  }
+  .settingsimg {
+    width: 0.7em;
+    height: 0.7em;
+  }
+  input{
     font-size: calc(1vw);
   }
   .button_cell {
@@ -116,7 +121,8 @@
     </div>
 
     <div id="cy"></div> 
-
+     <button id="showsettings" onClick="minimiseSettings()"><p>Filtering settings &nbsp;<img src="icons/angle_double_down.png" class="settingsimg"></p></button>
+    
     <div id="settings">
     Select a filtering method:<br>
     <select name = "dropdownmenu" onChange="DisplaySettings(this.value)"> 
@@ -126,7 +132,7 @@
     <br>
     <br>
     <div id="queryIndicator"></div>
-    <table id="checkboxes" border=1 align="left">
+    <table id="checkboxes" border=1>
     <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
     <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
     <tr>
