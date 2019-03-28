@@ -213,6 +213,7 @@ settings = tippy(document.getElementById("showsettings"), {
     theme: "light",
     trigger: "manual",
     interactive: true,
+    size: "large",
     animateFill: false,
     allowHTML: true,
     hideOnClick: false
@@ -473,7 +474,7 @@ cy.on("mouseover", "node", function(){
       `,
       theme: "light",
       placement: "bottom",
-      distance: 2,
+      distance: 4,
       duration: [100, 0],
       allowHTML: true,
       interactive: true,
@@ -657,9 +658,11 @@ var contextMenu = cy.contextMenus({
                         markedGO[categories[h]].push("none")
                     }
                     else {
-                        for (let i=0; i<markedGO[categories[h]].length; i++) {
-                            if (target.data("commonGO" + categories[h]).includes(markedGO[categories[h]][i])) {
-                                markedGO[categories[h]][i] = "<mark>" + markedGO[categories[h]][i] + "</mark>"
+                        if (target.id() != queryNode.id()) {
+                            for (let i=0; i<markedGO[categories[h]].length; i++) {
+                                if (target.data("commonGO" + categories[h]).includes(markedGO[categories[h]][i])) {
+                                    markedGO[categories[h]][i] = "<mark>" + markedGO[categories[h]][i] + "</mark>"
+                                }
                             }
                         }
                     }
@@ -699,11 +702,13 @@ var contextMenu = cy.contextMenus({
                     markedReactome.push("none")
                 }
                 else {
-                    for (let i=0; i<markedReactome.length; i++) {
-                        if (target.data("commonReactome").includes(markedReactome[i])) {
-                            markedReactome[i] = "<mark>" + markedReactome[i] + "</mark>"
-                        }
-                    }
+                     if (target.id() != queryNode.id()) {
+                         for (let i=0; i<markedReactome.length; i++) {
+                            if (target.data("commonReactome").includes(markedReactome[i])) {
+                                markedReactome[i] = "<mark>" + markedReactome[i] + "</mark>"
+                            }
+                        }   
+                     }    
                 }
                 target.tipReactome =  tippy(target.popperRef(), {
                   content: '<div style="overflow: auto; max-height:50vw;">' +
@@ -737,9 +742,11 @@ var contextMenu = cy.contextMenus({
                     markedOMIM.push("none")
                 }
                 else {
-                    for (let i=0; i<markedOMIM.length; i++) {
-                        if (target.data("commonOMIM").includes(markedOMIM[i])) {
-                            markedOMIM[i] = "<mark>" + markedOMIM[i] + "</mark>"
+                    if (target.id() != queryNode.id()) {
+                        for (let i=0; i<markedOMIM.length; i++) {
+                            if (target.data("commonOMIM").includes(markedOMIM[i])) {
+                                markedOMIM[i] = "<mark>" + markedOMIM[i] + "</mark>"
+                            }
                         }
                     }
                 }
