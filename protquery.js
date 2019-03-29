@@ -19,7 +19,7 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 .then(res => res.json())
 .then(function(data) {
   ids.push(id);
-  proteins[id] = {sources: [], targets: []};
+  proteins[id] = [];
   let nonHumanTargets = [];
 
   if (data.interactor.length == 0) {
@@ -81,17 +81,19 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
   var interactors = data.interactor;
 
   for (let i=0; i<interactors.length; i++) {
-    if (interactors[i].intactId1 == interactors[i].intactId2) {
-      proteins[id].targets.push(id);
+    if (interactors[i].intactId1 == interactors[i].intactId2
+        && !proteins[id].includes(id)) {
+      proteins[id].push(id);
       continue
     }
 
     var interactor = interactors[i].accession.replace(/-\d+$/, "");
-
     if(!interactors[i].organismDiffers) {
-      proteins[id].targets.push(interactor);
-      if (!ids.concat(query).concat(offspring).concat(flagged).includes(interactor)) {
-        offspring.push(interactor);
+      if (!proteins[interactor]) {
+        proteins[id].push(interactor);
+        if (!query.concat(offspring).concat(flagged).includes(interactor)) {
+          offspring.push(interactor);
+        }
       }
     }
     else {
@@ -126,17 +128,14 @@ await Promise.all(query.map(id => fetch(`${fetch_link}/interaction-min/${id}.jso
 if ((ids.length + offspring.length >= 100 || !offspring.length || source)
     && iquery != query[0]) {
   for (let i=initLength; i<ids.length; i++) {
-    let protein = proteins[ids[i]];
-    let targets = protein.targets;
+    let targets = proteins[ids[i]];
 
     if (source) {
-      protein.sources.push(source);
       collection.push({data: {source: source, target: ids[i]}});
     }
 
     for (let j=0; j<targets.length; j++) {
-      if (proteins[targets[j]] && !protein.sources.includes(targets[j])) {
-        proteins[targets[j]].sources.push(ids[i]);
+      if (proteins[targets[j]]) {
         if (source) {
           collection.push({data: {source: targets[j], target: ids[i]}});
         }
@@ -153,6 +152,7 @@ else {
   return await fetchAll(offspring, saved);
 }
 }
+
 
 async function BuildNetwork() {
 ids = [], nonHumans = [], collection= [];
