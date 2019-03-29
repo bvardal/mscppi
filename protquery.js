@@ -817,12 +817,17 @@ function minimiseSettings() {
 var dropdownchoice;                         
 dropdownchoice = "method1"                  // Default setting
 function DisplaySettings(method){
-	var allcheckboxes = $("input:checkbox")
-	for (let x=0; x<allcheckboxes.length; x++) {
-		if (allcheckboxes[x].checked == true) {
-			allcheckboxes[x].click()
-		}
-	}
+    $(".showhide").each(function() {  // Template tags that include individual filters are only accessible when tippy is rendered
+        this.click()
+    });
+	$("input:checkbox").each(function() {
+            if(this.checked) {
+                this.click()
+            }
+          });
+    $(".showhide").each(function() {
+        this.click()
+    })
     dropdownchoice = method
 }
 
