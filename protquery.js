@@ -561,7 +561,7 @@ var contextMenu = cy.contextMenus({
       selector: "node[^organismDiffers]",
       onClickFunction: async function (event) {
         var target = event.target || event.cyTarget;
-        let offspring = proteins[target.id()].targets.filter(id => !(proteins[id] || flagged.includes(id)));
+        let offspring = proteins[target.id()].filter(id => !(proteins[id] || flagged.includes(id)));
         if (offspring.length) {
           if (offspring.length > 10) {
             let warning = `Warning: This expansion will add ${offspring.length} new nodes to the network. Proceed?`
