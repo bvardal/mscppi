@@ -41,14 +41,21 @@
      margin: 10px;
      padding: 0px;
   }
+  table {
+    table-layout: fixed;
+  }
   #settings {
     display: none;
+    text-align: left;
+  }
+  .header_cell {
+    text-align: center;
   }
   #showsettings {
   all: unset;  
   display: none;
   position: fixed;
-  top: 30px;
+  top: 0px;
   cursor: pointer;
   }
   .settingsimg {
@@ -139,20 +146,21 @@
     <br>
     <div id="queryIndicator"></div>
     <table id="checkboxes" border=1>
-    <tr bgcolor="#94c4fc"><td colspan=2><b>Only highlight interactors with:</b></td></tr>
-    <tr bgcolor="#d1d1d1"><td colspan=2>Matching species with query:</td></tr>
+    <tr bgcolor="#94c4fc"><td colspan=2 class="header_cell"><b>Only highlight interactors with:</b></td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2 class="header_cell">Matching species with query:</td></tr>
     <tr>
       <td>Human origin</td>
       <td class="button_cell"><input id="organismcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.nonHuman');"/></td>
     </tr>
     <tr class="blank_row"></tr>
-    <tr bgcolor="#d1d1d1"><td colspan=2>Gene Ontology (GO) terms shared with query:</td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2 class="header_cell">Gene Ontology (GO) terms shared with query:</td></tr>
     <tr>
       <td>Any cellular component</td>
       <td class="button_cell"><input class="GOcheck" id="CCcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectGOC');"/></td>
     </tr>
     <tr>
-      <td colspan=2>Individual query cellular components &nbsp;&nbsp;&nbsp;&nbsp;<button class="GOcheck showhide" id="extraGOC">Show</button></td>
+      <td>Individual query cellular components</td>
+      <td><button class="GOcheck showhide" id="extraGOC">Show</button></td>
     </tr>
     <template id="extracheckboxesGOC"></template>
     <tr>
@@ -160,7 +168,8 @@
       <td class="button_cell"><input class="GOcheck" id="BPcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectGOP');"/></td>
     </tr>
     <tr>
-      <td colspan=2>Individual query biological processes &nbsp;&nbsp;&nbsp;&nbsp;<button class="GOcheck showhide" id="extraGOP">Show</button></td>
+      <td>Individual query biological processes</td>
+      <td><button class="GOcheck showhide" id="extraGOP">Show</button></td>
     </tr>
     <template id="extracheckboxesGOP"></template>
     <tr>
@@ -168,27 +177,30 @@
       <td class="button_cell"><input class="GOcheck" id="MFcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectGOF');"/></td>
     </tr>
     <tr>
-      <td colspan=2>Individual query molecular functions &nbsp;&nbsp;&nbsp;&nbsp;<button class="GOcheck showhide" id="extraGOF">Show</button></td>
+      <td>Individual query molecular functions</td>
+      <td><button class="GOcheck showhide" id="extraGOF">Show</button></td>
     </tr>
     <template id="extracheckboxesGOF"></template>
     <tr id="loadingGO" class="loading"></tr><tr class="blank_row"></tr>
-    <tr bgcolor="#d1d1d1"><td colspan=2>Reactome pathways shared with query:</td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2 class="header_cell">Reactome pathways shared with query:</td></tr>
     <tr>
       <td>Any pathway</td>
       <td class="button_cell"><input class="Reactomecheck" id="Reactomecheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectReactome');"/></td>
     </tr>
     <tr>
-      <td colspan=2>Individual query pathways &nbsp;&nbsp;&nbsp;&nbsp;<button class="Reactomecheck showhide" id="extraReactome">Show</button></td>
+      <td>Individual query pathways</td>
+      <td><button class="Reactomecheck showhide" id="extraReactome">Show</button></td>
     </tr>
     <template id="extracheckboxesReactome"></template> 
     <tr id="loadingReactome" class="loading"><tr class="blank_row"></tr>
-    <tr bgcolor="#d1d1d1"><td colspan=2>OMIM IDs shared with query:</td></tr>
+    <tr bgcolor="#d1d1d1"><td colspan=2 class="header_cell">OMIM IDs shared with query:</td></tr>
     <tr>
       <td>Any shared ID</td>
       <td class="button_cell"><input class="OMIMcheck" id="OMIMcheck" type="CHECKBOX" value="1" onchange="Optionfilterchoice(this, '.rejectOMIM');"/></td>
     </tr>
     <tr>
-      <td colspan=2>Individual query diseases &nbsp; &nbsp; &nbsp; &nbsp;<button class="OMIMcheck showhide" id="extraOMIM">Show</button></td>
+      <td>Individual query diseases</td>
+      <td><button class="OMIMcheck showhide" id="extraOMIM">Show</button></td>
     </tr>
     <template id="extracheckboxesOMIM"></template> 
     <tr id="loadingOMIM" class="loading"></tr>
